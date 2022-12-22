@@ -10,47 +10,52 @@ class Button():
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
+        self.width = self.image.get_width()
+        self.height = self.image.get_height()
         self.screen = pygame.display.set_mode((screen_width, screen_height))
 
         # Button ID
         self.id = Button.button_id
         # Increment the button id for the next buttons instantiated
-        Button.button_id += 1
+        Button.button_id += 1  
 
-        # Button border animations
-        self.border_animation_list = []
-        self.border_animation_index = 0 
-        self.border_animation_cooldown = 3000 # Milliseconds
-        self.border_animation_frame_time = pygame.time.get_ticks()
+        # Border animations
+        self.border_animation_x = self.rect.x
+        self.border_animation_y = self.rect.y
+        self.border_animation_line_thickness = 10
 
-        # Animation loading
-        for i in range(0, 2): # 2 images at the moment
-            # Load the border animation images
-            border_animation_image = pygame.transform.scale(pygame.image.load(f"graphics/Buttons/border_animations/{i}.png"), (430, 155))
-            # Append the animation image to the animations list
-            self.border_animation_list.append(border_animation_image)
-        
     def play_border_animations(self):
 
-        # Draw the animation frame onto the screen
-        self.screen.blit(self.border_animation_list[self.border_animation_index], (self.rect.x - 20, self.rect.y - 20))
+        # Draw the "square" onto the button
+        pygame.draw.line(self.screen, "red4", (self.border_animation_x, self.border_animation_y), (self.border_animation_x + self.border_animation_line_thickness, self.border_animation_y), self.border_animation_line_thickness)
+    
+        # Top left to top right
+        # If the border animation isn't at the top right corner of the button
+        if self.border_animation_x < self.rect.x + self.width - ( self.border_animation_line_thickness / 2) and self.border_animation_y == self.rect.y:
+            # Move to the right
+            self.border_animation_x += 1
 
-        # If enough time has passed since the last frame was played or since the animation was reset
-        if (pygame.time.get_ticks() - self.border_animation_frame_time) > self.border_animation_cooldown:
+        # Once the border animation is at the top right corner of the button and has become the same width as the line thickness
+        else:
 
-            # If the border animation index isn't at the end of the list 
-            if (self.border_animation_index < len(self.border_animation_list) - 1 ):
-                # Increment the index
-                self.border_animation_index += 1
+            # If the border animation is not at the bottom right (from the top right) of the button
+            if self.border_animation_y < self.rect.y + self.height and self.border_animation_x >= self.rect.x + self.width - ( self.border_animation_line_thickness / 2):
+                # Move down
+                self.border_animation_y += 1 
 
-            # If the border animation index is at the end of the list
+            # Once the border animation is at the bottom right corner of the button
             else:
-                # Reset the index
-                self.border_animation_index = 0
-                    
-            # Record the time that the frame was played / that the animation was reset
-            self.border_animation_frame_time = pygame.time.get_ticks()
+                # If the border animation is not at the bottom left corner of the button
+                if self.border_animation_x > self.rect.x - (self.border_animation_line_thickness / 2):
+                    # Move left
+                    self.border_animation_x -= 1
 
+                # Once the border animation is at the bottom left corner of the button
+                else:
+                    # If the border animation is not at the top left of the button
+                    if self.border_animation_y > self.rect.y - self.border_animation_line_thickness:
+                        # Move up
+                        self.border_animation_y -= 1 
 
     def update(self, pos):
         mouse_over_button = False
@@ -233,7 +238,7 @@ class Menu():
                 self.clicked = False             
 
     def animate_background(self):
-        
+
         # Fill the screen with black
         self.screen.fill("black")
 
@@ -303,8 +308,8 @@ class Menu():
             self.update(self.pos)
 
             # Play the button border animations in their respective menus
-            for button in self.buttons_list:
-                
+            for button in self.buttons_list:    
+
                 # If we are in the main menu
                 if self.show_main_menu:
                     # If the button is the 1st, 2nd or 3rd button instantiated
@@ -325,8 +330,8 @@ class Menu():
                     if button.id in {5, 6, 7}: 
                         # Play the button's border animations
                         button.play_border_animations()
-                
-                
+            
+
             # --------------------------------------
             # Update display
             pygame.display.update() 

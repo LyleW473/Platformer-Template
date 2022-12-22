@@ -9,6 +9,7 @@ class Main:
 
         # Pygame set-up
         pygame.init()
+        pygame.display.set_caption("Maniacal")
         self.screen = pygame.display.set_mode((screen_width, screen_height))
         self.clock = pygame.time.Clock()
         
