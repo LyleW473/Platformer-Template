@@ -109,6 +109,22 @@ class Menu():
         # Store the last menu visited so that we can go back to previous menus when the "Back" button is clicked
         self.last_menu_visited = 0 # 1 = Main menu, 2 = Paused menu
 
+        # ------------------------------------------------------------------------------------------------------------------------------------------------
+        # Animated background variables
+        self.arc_height = 300
+        self.arc_width = 800
+        self.arc_x = 200
+        self.arc_y = (screen_height / 2) - (self.arc_height / 2)
+        self.arc_starting_angle = 0.5
+        self.arc_finishing_angle = 3.14
+
+        # Dictionaries for the white/red arcs
+        self.white_arc_dictionary = {i:[self.arc_x, self.arc_y, self.arc_width - (i * 40), self.arc_height - (i * 15), self.arc_starting_angle + (0.314 * (i * 2)), self.arc_finishing_angle, 1] for i in range(0, 4 + 1)}
+        self.red_arc_dictionary = {i:[self.arc_x, self.arc_y, self.arc_width - (i * 40), self.arc_height - (i * 15), self.arc_finishing_angle, self.arc_starting_angle - (0.314 * (i * 2)), 1] for i in range(0, 4 + 1)}
+        self.arc_movement_direction = 1 # 1 = Moving right, -1 = Moving left
+
+         # ------------------------------------------------------------------------------------------------------------------------------------------------
+
     def update(self, pos):
         
         # Show the background animation
@@ -217,8 +233,48 @@ class Menu():
                 self.clicked = False             
 
     def animate_background(self):
+        
         # Fill the screen with black
         self.screen.fill("black")
+
+        for red_arc, arc_info in self.red_arc_dictionary.items():
+            # Draw red arcs onto the screen
+            pygame.draw.arc(self.screen, "red", (arc_info[0], arc_info[1], arc_info[2], arc_info[3]), arc_info[4], arc_info[5])
+
+            # If the starting angle is not equal to the finishing angle
+            if arc_info[4] != arc_info[5]:
+                # Increment the starting and finishing angle
+                arc_info[4] += 0.0314
+                arc_info[5] += 0.0314
+
+            # Moving the arc across the screen
+            arc_info[0] += 1 * self.arc_movement_direction
+
+            # If the arc has reached the far right or far left of the screen
+            if arc_info[0] == screen_width + 200 or arc_info[0] == 0 - arc_info[2] - 200:
+                # Turn around and move towards the other side of the screen
+                self.arc_movement_direction *= -1
+
+
+        for white_arc, arc_info in self.white_arc_dictionary.items():
+            # Draw red arcs onto the screen
+            pygame.draw.arc(self.screen, "white", (arc_info[0], arc_info[1], arc_info[2], arc_info[3]), arc_info[4], arc_info[5])
+
+            # Spinning the arcs
+            # If the starting angle is not equal to the finishing angle
+            if arc_info[4] != arc_info[5]:
+                # Increment the starting and finishing angle
+                arc_info[4] += 0.02
+                arc_info[5] += 0.02
+
+            # Moving the arc across the screen
+            arc_info[0] += 1 * self.arc_movement_direction
+
+            # If the arc has reached the far right or far left of the screen
+            if arc_info[0] == screen_width + 200 or arc_info[0] == 0 - arc_info[2] - 200:
+                # Turn around and move towards the other side of the screen
+                self.arc_movement_direction *= -1
+
 
     def run(self):
 
