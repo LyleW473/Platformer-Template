@@ -1,8 +1,12 @@
 import pygame
 from objects import Object
+from settings import *
 
 class Player(Object):
     def __init__(self, x, y):
+
+        # Position of the last tile that the player can be on. This will be updated by "Game" when the level is created
+        self.last_tile_position = None
 
         # Button border animations
         self.animation_list = []
@@ -43,3 +47,25 @@ class Player(Object):
         
         # Reset the animation frame counter
         self.animation_frame_counter = 0
+
+    def track_player_movement(self):
+        # The distance the player will move each frame
+        move_distance = 5
+        
+        # If the "a" key is pressed and moving left won't place the player off the screen
+        if pygame.key.get_pressed()[pygame.K_a] and self.rect.left - move_distance > 0:
+            # Move the player left
+            self.rect.x -= move_distance
+
+        # If the "a" key is pressed and the player isn't at the end of the tile map
+        if pygame.key.get_pressed()[pygame.K_d] and self.rect.right + move_distance < self.last_tile_position[0]:
+            # Move the player right
+            self.rect.x += move_distance
+
+    def run(self):
+
+        # Play animations
+        self.play_animation()
+
+        # Track player movement
+        self.track_player_movement()

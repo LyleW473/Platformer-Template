@@ -13,7 +13,7 @@ class Object:
         self.rect.x = x
         self.rect.y = y
 
-    def draw(self, surface):
-
+    def draw(self, surface, x, y):
+        
         # Draw the tile onto the surface
-        surface.blit(self.image, self.rect)
+        surface.blit(self.image, (x, y))
