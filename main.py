@@ -18,7 +18,7 @@ class Main:
         # Create an object to track time
         self.clock = pygame.time.Clock()
         
-        # Createa a game states controller
+        # Create a game states controller
         self.game_states_controller = GameStatesController()
 
     def run(self):

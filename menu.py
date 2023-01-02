@@ -8,6 +8,7 @@ class Menu:
         # Screen
         self.screen = pygame.display.get_surface()
 
+
         # ------------------------------------------------------------------------------------------------------------------------------------------------
         # Buttons
         # Note: Measurements of all buttons are: (400 x 125) pixels
