@@ -1,118 +1,30 @@
-from settings import *
 import pygame, sys
+from button import Button
+from settings import * 
 
-class Button():
-    # ID used to track which menu the button will be in
-    button_id = 1
-
-    def __init__(self, x, y, image):
-        self.image = image
-        self.rect = self.image.get_rect()
-        self.rect.x = x
-        self.rect.y = y
-        self.width = self.image.get_width()
-        self.height = self.image.get_height()
-        self.screen = pygame.display.set_mode((screen_width, screen_height))
-
-        # Button ID
-        self.id = Button.button_id
-        # Increment the button id for the next buttons instantiated
-        Button.button_id += 1  
-
-        # Border animations
-        self.border_animation_x = self.rect.x
-        self.border_animation_y = self.rect.y
-        self.border_animation_line_thickness = 10
-
-    def play_border_animations(self):
-
-        # Draw the "square" onto the button
-        pygame.draw.line(self.screen, "red4", (self.border_animation_x, self.border_animation_y), (self.border_animation_x + self.border_animation_line_thickness, self.border_animation_y), self.border_animation_line_thickness)
-    
-        # Top left to top right
-        # If the border animation isn't at the top right corner of the button
-        if self.border_animation_x < self.rect.x + self.width - ( self.border_animation_line_thickness / 2) and self.border_animation_y == self.rect.y:
-            # Move to the right
-            self.border_animation_x += 1
-
-        # Once the border animation is at the top right corner of the button and has become the same width as the line thickness
-        else:
-
-            # If the border animation is not at the bottom right (from the top right) of the button
-            if self.border_animation_y < self.rect.y + self.height and self.border_animation_x >= self.rect.x + self.width - ( self.border_animation_line_thickness / 2):
-                # Move down
-                self.border_animation_y += 1 
-
-            # Once the border animation is at the bottom right corner of the button
-            else:
-                # If the border animation is not at the bottom left corner of the button
-                if self.border_animation_x > self.rect.x - (self.border_animation_line_thickness / 2):
-                    # Move left
-                    self.border_animation_x -= 1
-
-                # Once the border animation is at the bottom left corner of the button
-                else:
-                    # If the border animation is not at the top left of the button
-                    if self.border_animation_y > self.rect.y - self.border_animation_line_thickness:
-                        # Move up
-                        self.border_animation_y -= 1 
-
-    def update(self, pos):
-        mouse_over_button = False
-        # Check for a collision between the button and the current mouse position
-        if self.rect.collidepoint(pos):
-            mouse_over_button = True
-
-        # Draw the button
-        self.screen.blit(self.image, self.rect)
-
-        # Return the clicked variable to the menu
-        return mouse_over_button
-
-
-class Menu():
+class Menu:
     def __init__(self):
-        # Basic set-up
-        self.screen = pygame.display.set_mode((screen_width, screen_height))
-        self.clock = pygame.time.Clock()
+
+        # Screen
+        self.screen = pygame.display.get_surface()
 
         # ------------------------------------------------------------------------------------------------------------------------------------------------
         # Buttons
-        self.buttons_list = [] # Holds all the buttons inside a list
-        self.clicked = False # Used to track whenever the buttons on the menus are clicked
-
         # Note: Measurements of all buttons are: (400 x 125) pixels
-        # Main menu
-        self.play_button = Button((screen_width / 2) - 200 , 200 , pygame.image.load("graphics/Buttons/play_button.png"))
-        self.controls_button = Button((screen_width / 2) - 200, 400, pygame.image.load("graphics/Buttons/controls_button.png"))
-        self.quit_button = Button((screen_width / 2) - 200, 600, pygame.image.load("graphics/Buttons/quit_button.png"))
 
-        # Controls menu
-        self.back_button = Button((screen_width / 2) - 200, 600, pygame.image.load("graphics/Buttons/back_button.png"))
-
-        # Paused menu
-        self.continue_button = Button((screen_width / 2) - 200, 200, pygame.image.load("graphics/Buttons/continue_button.png"))
-        self.controls_button_2 = Button((screen_width / 2) - 200, 400, pygame.image.load("graphics/Buttons/controls_button.png"))
-        self.quit_button_2 = Button((screen_width / 2) - 200, 600, pygame.image.load("graphics/Buttons/quit_button.png"))
-        
-        # Add the buttons to the buttons list
-        self.buttons_list.append(self.play_button)
-        self.buttons_list.append(self.controls_button)
-        self.buttons_list.append(self.quit_button)
-        self.buttons_list.append(self.back_button)
-        self.buttons_list.append(self.continue_button)
-        self.buttons_list.append(self.controls_button_2)
-        self.buttons_list.append(self.quit_button_2)
+        # Create the buttons
+        self.create_buttons()
+    
         # ------------------------------------------------------------------------------------------------------------------------------------------------
 
         # Game states
-        self.in_game = False # Determines whether we are in game or not
-        self.show_main_menu = True # Determines whether we show the main menu or not
-        self.show_controls_menu = False # Determines whether we show the controls menu or not
-        self.show_paused_menu = False # Determines whether we show the paused menu or not
+
+        self.show_main_menu = True 
+        self.show_controls_menu = False 
+        self.show_paused_menu = False 
         
-        # Store the last menu visited so that we can go back to previous menus when the "Back" button is clicked
-        self.last_menu_visited = 0 # 1 = Main menu, 2 = Paused menu
+        # Store the previous menu so that we can go back to previous menus when the "Back" button is clicked
+        self.previous_menu = None 
 
         # ------------------------------------------------------------------------------------------------------------------------------------------------
         # Animated background variables
@@ -128,114 +40,53 @@ class Menu():
         self.red_arc_dictionary = {i:[self.arc_x, self.arc_y, self.arc_width - (i * 40), self.arc_height - (i * 15), self.arc_finishing_angle, self.arc_starting_angle - (0.314 * (i * 2)), 1] for i in range(0, 4 + 1)}
         self.arc_movement_direction = 1 # 1 = Moving right, -1 = Moving left
 
-         # ------------------------------------------------------------------------------------------------------------------------------------------------
+        # ------------------------------------------------------------------------------------------------------------------------------------------------
+        # Mouse
+        self.left_mouse_button_released = True # Attribute used to track if the left mouse button is released so that 
 
-    def update(self, pos):
+    def create_buttons(self):
+
+        # Create lists for all menus in the game
+        self.main_menu_buttons = []
+        self.controls_menu_buttons = []
+        self.paused_menu_buttons = []
+
+        # ------------------------------------------------------------------------
+        # Main menu
+        play_button = Button((screen_width / 2) - 200 , 200 , pygame.image.load("graphics/MenuButtons/play_button.png"))
+        controls_button = Button((screen_width / 2) - 200, 400, pygame.image.load("graphics/MenuButtons/controls_button.png"))
+        quit_button = Button((screen_width / 2) - 200, 600, pygame.image.load("graphics/MenuButtons/quit_button.png"))
         
-        # Show the background animation
-        self.animate_background()
+        # Add the buttons to the main menu buttons list
+        self.main_menu_buttons.append(play_button)
+        self.main_menu_buttons.append(controls_button)
+        self.main_menu_buttons.append(quit_button)
 
-        # ------------------------------------------------------------------------------------------------------------------------------------------------
-        # MAIN MENU
+        # ------------------------------------------------------------------------
+        # Controls menu
+        self.back_button = Button((screen_width / 2) - 200, 600, pygame.image.load("graphics/MenuButtons/back_button.png"))
 
-        if self.show_main_menu == True:
+        # Add the buttons to the controls menu buttons list
+        self.controls_menu_buttons.append(self.back_button)
 
-            # PLAY BUTTON
-            # If the mouse is over the play button and is the mouse button is clicked
-            if self.play_button.update(pos) == True and self.clicked == True: 
-                # Reset the clicked variable to default so more clicks can be detected
-                self.clicked = False
-                # Set the main menu to stop showing and start the game
-                self.show_main_menu = False
-                self.in_game = True
+        # ------------------------------------------------------------------------
+        # Paused menu
+        continue_button = Button((screen_width / 2) - 200, 200, pygame.image.load("graphics/MenuButtons/continue_button.png"))
+        controls_button_2 = Button((screen_width / 2) - 200, 400, pygame.image.load("graphics/MenuButtons/controls_button.png"))
+        quit_button_2 = Button((screen_width / 2) - 200, 600, pygame.image.load("graphics/MenuButtons/quit_button.png"))
 
-            # CONTROLS BUTTON
-            if self.controls_button.update(pos) == True and self.clicked == True: 
-                # Reset the clicked variable to default so more clicks can be detected
-                self.clicked = False
+        # Add the buttons to the paused menu buttons list
+        self.paused_menu_buttons.append(continue_button)
+        self.paused_menu_buttons.append(controls_button_2)
+        self.paused_menu_buttons.append(quit_button_2)
 
-                # Display the show controls menu
-                self.show_controls_menu = True
-                self.show_main_menu = False
+    def mouse_position_updating(self):
 
-                # Set the last menu visited from the controls menu to be the paused menu
-                self.last_menu_visited = 1
+        # Retrieve the mouse position
+        self.mouse_position = pygame.mouse.get_pos()
 
-            # QUIT BUTTON
-            # If the mouse is over the quit button and is the mouse button is clicked
-            if self.quit_button.update(pos) == True and self.clicked == True:
-                # Quit the game
-                pygame.quit()
-                sys.exit()
-
-            # If none of the buttons above are True, that means the player clicked on empty space
-            elif self.play_button.update(pos) == False and self.quit_button.update(pos) == False and self.clicked == True: 
-                # Reset the clicked variable to default so more clicks can be detected
-                self.clicked = False
-
-            
-        # ------------------------------------------------------------------------------------------------------------------------------------------------
-        # CONTROLS MENU
-
-        if self.show_controls_menu == True:
-
-            # BACK BUTTON
-            if self.back_button.update(pos) == True and self.clicked == True:
-                # Reset the clicked variable to default so more clicks can be detected
-                self.clicked = False
-
-                # Go back to the last menu 
-                if self.last_menu_visited == 1: # MAIN MENU
-                    self.show_main_menu = True
-
-                elif self.last_menu_visited == 2: # PAUSED MENU
-                    self.show_paused_menu = True
-
-                # Don't show the controls menu
-                self.show_controls_menu = False
-
-            # If none of the buttons above are True, that means the player clicked on empty space
-            elif self.back_button.update(pos) == False and self.clicked == True: 
-                # Reset the clicked variable to default so more clicks can be detected
-                self.clicked = False
-
-        # ------------------------------------------------------------------------------------------------------------------------------------------------
-        # PAUSED MENU
-
-        if self.show_paused_menu == True:
-            
-            # CONTINUE BUTTON
-            if self.continue_button.update(pos) == True and self.clicked == True: 
-                # Reset the clicked variable to default so more clicks can be detected
-                self.clicked = False
-
-                # Go back to the main game
-                self.in_game = True
-                self.show_paused_menu = False
-
-            # CONTROLS BUTTON
-            if self.controls_button_2.update(pos) == True and self.clicked == True: 
-                # Reset the clicked variable to default so more clicks can be detected
-                self.clicked = False
-
-                # Display the show controls menu
-                self.show_controls_menu = True
-                self.show_paused_menu = False   
-                
-                # Set the last menu visited from the controls menu to be the paused menu
-                self.last_menu_visited = 2
-
-            # QUIT BUTTON
-            # If the mouse is over the quit button and is the mouse button is clicked
-            if self.quit_button_2.update(pos) == True and self.clicked == True:
-                # Quit the game
-                pygame.quit()
-                sys.exit()
-
-            # If none of the buttons above are True, that means the player clicked on empty space
-            elif self.continue_button.update(pos) == False and self.controls_button_2.update(pos) == False and self.quit_button_2.update(pos) == False:
-                # Reset the clicked variable to default so more clicks can be detected
-                self.clicked = False             
+        # Define the mouse rect and draw it onto the screen (For collisions with drawing tiles)
+        self.mouse_rect = pygame.Rect(self.mouse_position[0], self.mouse_position[1], 1, 1)
 
     def animate_background(self):
 
@@ -279,65 +130,150 @@ class Menu():
             if arc_info[0] == screen_width + 200 or arc_info[0] == 0 - arc_info[2] - 200:
                 # Turn around and move towards the other side of the screen
                 self.arc_movement_direction *= -1
+    
+    def draw_buttons(self, menu_state, menu_buttons_list):
+        
+        # If the player is in x menu
+        if menu_state == True:
 
+            # For all buttons in the menu's button list
+            for button in menu_buttons_list:
+
+                # Draw the button
+                button.draw()
+
+                # Play the button's border animation
+                button.play_border_animations()
 
     def run(self):
 
-        # While we aren't in-game
-        while self.in_game == False:
+        # Retrieve the mouse position and update the mouse rect
+        self.mouse_position_updating()
 
-            # Event handler
-            for event in pygame.event.get():
+        # Check if the left mouse button has been released, and if it has, set the attribute to True
+        if pygame.mouse.get_pressed()[0] == 0:
+            self.left_mouse_button_released = True
 
-                # If the mouse button
-                if event.type == pygame.MOUSEBUTTONDOWN:
-                    # Set the self.clicked variable to True
-                    self.clicked = True
+        # Show the background animations for the menus
+        self.animate_background()
 
-                # If the exit button was pressed
-                if event.type == pygame.QUIT:
-                    # Close the program
-                    pygame.quit()
-                    sys.exit()
+        # ---------------------------------------------
+        # Main menu
 
+        if self.show_main_menu == True: 
 
-            # Find the position of the mouse
-            self.pos = pygame.mouse.get_pos()
+            # Draw the buttons
+            self.draw_buttons(menu_state = self.show_main_menu, menu_buttons_list = self.main_menu_buttons)
 
-            # Constantly update the menu, checking for whenever the player is clicking buttons
-            self.update(self.pos)
+            # If the left mouse button is pressed and the left mouse button isn't being pressed already
+            if pygame.mouse.get_pressed()[0] == 1 and self.left_mouse_button_released == True:
 
-            # Play the button border animations in their respective menus
-            for button in self.buttons_list:    
+                    # Set the left mouse button as not released
+                    self.left_mouse_button_released = False   
 
-                # If we are in the main menu
-                if self.show_main_menu:
-                    # If the button is the 1st, 2nd or 3rd button instantiated
-                    if button.id in {1, 2, 3}:
-                        # Play the button's border animations
-                        button.play_border_animations()
+                    # Look for collisions between the mouse rect and the rect of any button inside the list
+                    button_collision = self.mouse_rect.collidelist(self.main_menu_buttons)
 
-                # If we are in the controls menu
-                elif self.show_controls_menu:
-                    # If the button is the 4th button instantiated
-                    if button.id in {4}:
-                        # Play the button's border animations
-                        button.play_border_animations()
-                
-                # If we are in the paused menu
-                elif self.show_paused_menu:
-                    # If the button is the 5th 6th or 7th button instantiated
-                    if button.id in {5, 6, 7}: 
-                        # Play the button's border animations
-                        button.play_border_animations()
-            
+                    # Check for which button was clicked
+                    match button_collision:
 
-            # --------------------------------------
-            # Update display
-            pygame.display.update() 
+                        # If the mouse collided with the "Play" button 
+                        case 0:
+                            # Set all menus to False, which will be detected by the game states controller, moving into the actual game
+                            self.show_main_menu = False
+                            self.show_controls_menu = False
+                            self.show_paused_menu = False
 
-            # Limit FPS to 60
-            self.clock.tick(60)
+                        # If the mouse collided with the "Controls" button 
+                        case 1:
+                            # Set the previous menu to be this menu so that we can come back to this menu when the "Back" button is clicked
+                            self.previous_menu = "Main"
 
+                            # Show the controls menu
+                            self.show_main_menu = False
+                            self.show_controls_menu = True
+                        
+                        # If the mouse collided with the "Quit" button 
+                        case 2:
+                            # Exit the program
+                            pygame.quit()
+                            sys.exit()
 
+        # ---------------------------------------------
+        # Controls menu
 
+        elif self.show_controls_menu == True:
+
+            # Draw the buttons
+            self.draw_buttons(menu_state = self.show_controls_menu, menu_buttons_list = self.controls_menu_buttons)
+
+            # If the left mouse button is pressed and the left mouse button isn't being pressed already
+            if pygame.mouse.get_pressed()[0] == 1 and self.left_mouse_button_released == True:
+
+                # Set the left mouse button as not released
+                self.left_mouse_button_released = False          
+
+                # Look for collisions between the mouse rect and the rect of any button inside the list
+                button_collision = self.mouse_rect.collidelist(self.controls_menu_buttons)
+
+                # Check for which button was clicked
+                match button_collision:
+
+                    # If the mouse collided with the "Back" button
+                    case 0:
+
+                        # Check which menu the controls menu was entered from
+                        match self.previous_menu:        
+
+                            # From the main menu
+                            case "Main":
+                                # Show the main menu again
+                                self.show_main_menu = True
+                            
+                            # From the paused menu
+                            case "Paused":
+                                # Show the paused menu again
+                                self.show_paused_menu = True
+
+                        # Stop showing the controls menu
+                        self.show_controls_menu = False
+
+        # ---------------------------------------------
+        # Paused menu
+
+        elif self.show_paused_menu == True:
+
+            # Draw the buttons
+            self.draw_buttons(menu_state = self.show_paused_menu, menu_buttons_list = self.paused_menu_buttons)
+
+            # If the left mouse button is pressed and the left mouse button isn't being pressed already
+            if pygame.mouse.get_pressed()[0] == 1 and self.left_mouse_button_released == True:
+
+                # Set the left mouse button as not released
+                self.left_mouse_button_released = False          
+
+                # Look for collisions between the mouse rect and the rect of any button inside the list
+                button_collision = self.mouse_rect.collidelist(self.paused_menu_buttons)
+
+                # Check for which button was clicked
+                match button_collision:
+
+                     # If the mouse collided with the "Continue" button
+                    case 0: 
+                        # Stop showing the paused menu
+                        self.show_paused_menu = False
+
+                    # If the mouse collided with the "Controls" button
+                    case 1:
+                        # Set the previous menu to be this menu so that we can come back to this menu when the "Back" button is clicked
+                        self.previous_menu = "Paused"
+
+                        # Show the controls menu
+                        self.show_paused_menu = False
+                        self.show_controls_menu = True
+
+                    # If the mouse collided with the "Quit" button 
+                    case 2:
+                        # Exit the program
+                        pygame.quit()
+                        sys.exit()

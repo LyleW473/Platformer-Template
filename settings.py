@@ -1,3 +1,3 @@
 # Screen measurements
-screen_width = 1600 
-screen_height = 900
+screen_width = 1920
+screen_height = 1080
