@@ -1,64 +1,45 @@
-class Player:
-    def __init__(self):
-        pass
+import pygame
+from objects import Object
 
-        # # TEMPORARY STORAGE:
-        # # Button border animations
-        # self.border_animation_list = []
-        # self.border_animation_index = 0 
-        # self.border_animation_cooldown = 3000 # Milliseconds
-        # self.border_animation_frame_time = pygame.time.get_ticks()
+class Player(Object):
+    def __init__(self, x, y):
 
-        # # Animation loading
-        # for i in range(0, 2): # 2 images at the moment
-        #     # Load the border animation images
-        #     border_animation_image = pygame.transform.scale(pygame.image.load(f"graphics/Buttons/border_animations/{i}.png"), (430, 155))
-        #     # Append the animation image to the animations list
-        #     self.border_animation_list.append(border_animation_image)
+        # Button border animations
+        self.animation_list = []
+        self.animation_index = 0 
+        self.animation_cooldown = 3000 
+        self.animation_frame_counter = 0
 
-    # def play_border_animations(self):
+        # Animation loading
+        for i in range(0, 1): 
+            # Load the border animation images
+            animation_image = pygame.image.load(f"graphics/Player/{i}.png").convert_alpha()
+            # Append the animation image to the animations list
+            self.animation_list.append(animation_image)
 
-        # # Draw the animation frame onto the screen
-        # self.screen.blit(self.border_animation_list[self.border_animation_index], (self.rect.x - 20, self.rect.y - 20))
+        # Inherit from the objects class, which has the basic attributes and methods of all objects
+        super().__init__(x = x, y = y, image = self.animation_list[0])
 
-        # # If enough time has passed since the last frame was played or since the animation was reset
-        # if (pygame.time.get_ticks() - self.border_animation_frame_time) > self.border_animation_cooldown:
+    def play_animation(self):
+        
+        # Increment the counter 
+        self.animation_frame_counter += 200
+    
+        # Set the image to be this animation frame
+        self.image = self.animation_list[self.animation_index]
 
-        #     # If the border animation index isn't at the end of the list 
-        #     if (self.border_animation_index < len(self.border_animation_list) - 1 ):
-        #         # Increment the index
-        #         self.border_animation_index += 1
+        # If enough time has passed since the last frame was played or since the animation was reset
+        if self.animation_frame_counter > self.animation_cooldown:
 
-        #     # If the border animation index is at the end of the list
-        #     else:
-        #         # Reset the index
-        #         self.border_animation_index = 0
-                    
-        #     # Record the time that the frame was played / that the animation was reset
-        #     self.border_animation_frame_time = pygame.time.get_ticks()
+            # If the border animation index isn't at the end of the list 
+            if (self.animation_index < len(self.animation_list) - 1 ):
+                # Increment the index
+                self.animation_index += 1
 
-
-    # def run(self):
-            #         # # Play the button border animations in their respective menus
-            # for button in self.buttons_list:
-                
-            #     # If we are in the main menu
-            #     if self.show_main_menu:
-            #         # If the button is the 1st, 2nd or 3rd button instantiated
-            #         if button.id in {1, 2, 3}:
-            #             # Play the button's border animations
-            #             button.play_border_animations()
-
-            #     # If we are in the controls menu
-            #     elif self.show_controls_menu:
-            #         # If the button is the 4th button instantiated
-            #         if button.id in {4}:
-            #             # Play the button's border animations
-            #             button.play_border_animations()
-                
-            #     # If we are in the paused menu
-            #     elif self.show_paused_menu:
-            #         # If the button is the 5th 6th or 7th button instantiated
-            #         if button.id in {5, 6, 7}: 
-            #             # Play the button's border animations
-            #             button.play_border_animations()
+            # If the border animation index is at the end of the list
+            else:
+                # Reset the index
+                self.animation_index = 0
+        
+        # Reset the animation frame counter
+        self.animation_frame_counter = 0

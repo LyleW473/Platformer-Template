@@ -54,9 +54,9 @@ class Menu:
 
         # ------------------------------------------------------------------------
         # Main menu
-        play_button = Button((screen_width / 2) - 200 , 200 , pygame.image.load("graphics/MenuButtons/play_button.png"))
-        controls_button = Button((screen_width / 2) - 200, 400, pygame.image.load("graphics/MenuButtons/controls_button.png"))
-        quit_button = Button((screen_width / 2) - 200, 600, pygame.image.load("graphics/MenuButtons/quit_button.png"))
+        play_button = Button((screen_width / 2) - 200 , 200 , pygame.image.load("graphics/MenuButtons/play_button.png"), surface = self.screen)
+        controls_button = Button((screen_width / 2) - 200, 400, pygame.image.load("graphics/MenuButtons/controls_button.png"), surface = self.screen)
+        quit_button = Button((screen_width / 2) - 200, 600, pygame.image.load("graphics/MenuButtons/quit_button.png"), surface = self.screen)
         
         # Add the buttons to the main menu buttons list
         self.main_menu_buttons.append(play_button)
@@ -65,16 +65,16 @@ class Menu:
 
         # ------------------------------------------------------------------------
         # Controls menu
-        self.back_button = Button((screen_width / 2) - 200, 600, pygame.image.load("graphics/MenuButtons/back_button.png"))
+        self.back_button = Button((screen_width / 2) - 200, 600, pygame.image.load("graphics/MenuButtons/back_button.png"), surface = self.screen)
 
         # Add the buttons to the controls menu buttons list
         self.controls_menu_buttons.append(self.back_button)
 
         # ------------------------------------------------------------------------
         # Paused menu
-        continue_button = Button((screen_width / 2) - 200, 200, pygame.image.load("graphics/MenuButtons/continue_button.png"))
-        controls_button_2 = Button((screen_width / 2) - 200, 400, pygame.image.load("graphics/MenuButtons/controls_button.png"))
-        quit_button_2 = Button((screen_width / 2) - 200, 600, pygame.image.load("graphics/MenuButtons/quit_button.png"))
+        continue_button = Button((screen_width / 2) - 200, 200, pygame.image.load("graphics/MenuButtons/continue_button.png"), surface = self.screen)
+        controls_button_2 = Button((screen_width / 2) - 200, 400, pygame.image.load("graphics/MenuButtons/controls_button.png"), surface = self.screen)
+        quit_button_2 = Button((screen_width / 2) - 200, 600, pygame.image.load("graphics/MenuButtons/quit_button.png"), surface = self.screen)
 
         # Add the buttons to the paused menu buttons list
         self.paused_menu_buttons.append(continue_button)

@@ -2,10 +2,10 @@ import pygame
 from settings import * 
 
 class Button():
-    def __init__(self, x, y, image):
+    def __init__(self, x, y, image, surface):
         
         # Basic attributes
-        self.screen = pygame.display.get_surface()
+        self.surface = surface
         self.image = image
         self.rect = self.image.get_rect()
         self.rect.x = x
@@ -21,7 +21,7 @@ class Button():
     def play_border_animations(self):
 
         # Draw the "square" onto the button
-        pygame.draw.line(self.screen, "red4", (self.border_animation_x, self.border_animation_y), (self.border_animation_x + self.border_animation_line_thickness, self.border_animation_y), self.border_animation_line_thickness)
+        pygame.draw.line(self.surface, "red4", (self.border_animation_x, self.border_animation_y), (self.border_animation_x + self.border_animation_line_thickness, self.border_animation_y), self.border_animation_line_thickness)
     
         # Top left to top right
         # If the border animation isn't at the top right corner of the button
@@ -52,4 +52,4 @@ class Button():
                         self.border_animation_y -= 1 
 
     def draw(self):
-        self.screen.blit(self.image, (self.rect))
+        self.surface.blit(self.image, (self.rect))
