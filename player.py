@@ -1,8 +1,8 @@
 import pygame
-from objects import Object
+from generic import Generic
 from settings import *
 
-class Player(Object):
+class Player(Generic):
     def __init__(self, x, y):
 
         # Position of the last tile that the player can be on. This will be updated by "Game" when the level is created

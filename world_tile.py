@@ -1,8 +1,8 @@
 import pygame
-from objects import Object
+from generic import Generic
 
-class WorldTile(Object):
+class WorldTile(Generic):
     def __init__(self, x, y, image):
 
-        # Inherit from the objects class, which has the basic attributes and methods of all objects
+        # Inherit from the Generic class, which has basic attributes and methods.
         super().__init__(x = x, y = y, image = image)

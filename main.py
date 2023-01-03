@@ -12,8 +12,8 @@ class Main:
         # Set the caption
         pygame.display.set_caption("Maniacal")
 
-        # Set the screen to be full screen
-        self.screen = pygame.display.set_mode(flags = pygame.FULLSCREEN)
+        # Set the screen to be full screen 
+        self.screen = pygame.display.set_mode(flags = pygame.FULLSCREEN, depth = 32)
         
         # Create a game states controller
         self.game_states_controller = GameStatesController()

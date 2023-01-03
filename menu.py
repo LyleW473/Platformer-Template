@@ -81,6 +81,7 @@ class Menu:
         self.paused_menu_buttons.append(controls_button_2)
         self.paused_menu_buttons.append(quit_button_2)
 
+
     def mouse_position_updating(self):
 
         # Retrieve the mouse position
@@ -131,7 +132,7 @@ class Menu:
                 # Turn around and move towards the other side of the screen
                 self.arc_movement_direction *= -1
     
-    def draw_buttons(self, menu_state, menu_buttons_list):
+    def update_buttons(self, menu_state, menu_buttons_list):
         
         # If the player is in x menu
         if menu_state == True:
@@ -139,7 +140,7 @@ class Menu:
             # For all buttons in the menu's button list
             for button in menu_buttons_list:
                 
-                # Set the delta time of the button
+                # Update the delta time of the button
                 button.delta_time = self.delta_time
 
                 # Draw the button
@@ -147,7 +148,7 @@ class Menu:
 
                 # Play the button's border animation
                 button.play_border_animations()
-
+    
     def run(self, delta_time):
 
         # Update delta time 
@@ -168,8 +169,8 @@ class Menu:
 
         if self.show_main_menu == True: 
 
-            # Draw the buttons
-            self.draw_buttons(menu_state = self.show_main_menu, menu_buttons_list = self.main_menu_buttons)
+            # Draw and update the buttons
+            self.update_buttons(menu_state = self.show_main_menu, menu_buttons_list = self.main_menu_buttons)
 
             # If the left mouse button is pressed and the left mouse button isn't being pressed already
             if pygame.mouse.get_pressed()[0] == 1 and self.left_mouse_button_released == True:
@@ -210,8 +211,8 @@ class Menu:
 
         elif self.show_controls_menu == True:
 
-            # Draw the buttons
-            self.draw_buttons(menu_state = self.show_controls_menu, menu_buttons_list = self.controls_menu_buttons)
+            # Draw and update the buttons
+            self.update_buttons(menu_state = self.show_controls_menu, menu_buttons_list = self.controls_menu_buttons)
 
             # If the left mouse button is pressed and the left mouse button isn't being pressed already
             if pygame.mouse.get_pressed()[0] == 1 and self.left_mouse_button_released == True:
@@ -249,8 +250,8 @@ class Menu:
 
         elif self.show_paused_menu == True:
 
-            # Draw the buttons
-            self.draw_buttons(menu_state = self.show_paused_menu, menu_buttons_list = self.paused_menu_buttons)
+            # Draw and update the buttons
+            self.update_buttons(menu_state = self.show_paused_menu, menu_buttons_list = self.paused_menu_buttons)
 
             # If the left mouse button is pressed and the left mouse button isn't being pressed already
             if pygame.mouse.get_pressed()[0] == 1 and self.left_mouse_button_released == True:

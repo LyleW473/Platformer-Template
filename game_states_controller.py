@@ -106,14 +106,14 @@ class GameStatesController():
                             if self.full_screen == True:
                                 
                                 # Change to windowed mode
-                                self.screen = pygame.display.set_mode((screen_width, screen_height - 50), pygame.RESIZABLE) # -50 so the title bar is visible when exiting full screen
+                                self.screen = pygame.display.set_mode((screen_width, screen_height - 50), flags = pygame.RESIZABLE, depth = 32) # -50 so the title bar is visible when exiting full screen
                                 self.full_screen = False
 
                             # Changing from windowed to full screen mode
                             elif self.full_screen == False:
                                 
                                 # Change to full screen mode
-                                self.screen = pygame.display.set_mode(flags = pygame.FULLSCREEN)
+                                pygame.display.set_mode(flags = pygame.FULLSCREEN, depth = 32)
                                 self.full_screen = True
 
                         # "Esc" key

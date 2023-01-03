@@ -78,7 +78,7 @@ class Game:
                 camera_position_x = self.player.rect.centerx - (self.scaled_surface.get_width() / 2)
 
             # If the player is half the scaled screen width away from the last tile in the tile map
-            elif self.player.rect.centerx > self.last_tile_position[0] - (self.scaled_surface.get_width() / 2):
+            elif self.player.rect.centerx >= self.last_tile_position[0] - (self.scaled_surface.get_width() / 2):
                 # Set the camera to stop moving and be locked at half the size of the scaled screen width from the last tile in the tile map
                 camera_position_x = self.last_tile_position[0] - self.scaled_surface.get_width() 
 
@@ -171,8 +171,7 @@ class Game:
 
                     # Draw the tile object at the camera position
                     tile_object.draw(surface = self.scaled_surface, x = (tile_object.rect.x - self.camera_position[0]), y = (tile_object.rect.y - self.camera_position[1]))
-
-    
+  
     def run(self, delta_time):
 
         # Update the delta time of all objects 

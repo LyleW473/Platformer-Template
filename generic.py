@@ -1,6 +1,4 @@
-import pygame
-
-class Object:
+class Generic:
     def __init__(self, x, y, image):
 
         # Image
