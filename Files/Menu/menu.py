@@ -1,6 +1,6 @@
 import pygame, sys
-from button import Button
-from settings import * 
+from Menu.button import Button
+from Global.settings import * 
 
 class Menu:
     def __init__(self):

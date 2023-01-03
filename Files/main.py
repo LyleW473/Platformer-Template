@@ -1,5 +1,5 @@
 import pygame, time
-from settings import *
+from Global.settings import *
 from game_states_controller import GameStatesController
 
 
@@ -22,7 +22,7 @@ class Main:
         # Record the previous frame that was played
         self.previous_frame = time.perf_counter()
         
-        # Create an object to track timed
+        # Create an object to track time
         self.clock = pygame.time.Clock()
 
     def run(self):

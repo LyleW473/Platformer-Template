@@ -1,6 +1,6 @@
 import pygame
-from generic import Generic
-from settings import *
+from Global.generic import Generic
+from Global.settings import *
 
 class Player(Generic):
     def __init__(self, x, y):

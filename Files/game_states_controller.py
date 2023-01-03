@@ -1,7 +1,7 @@
 import pygame, sys, string
-from settings import *
-from menu import Menu
-from game import Game
+from Global.settings import *
+from Menu.menu import Menu
+from Level.game import Game
 
 class GameStatesController():
     def __init__(self):
@@ -27,7 +27,7 @@ class GameStatesController():
             # Loading the tile map from the level tile maps text file
 
             # Open the text file which holds 
-            with open("level_tile_maps.txt", "r") as level_tile_maps_file:
+            with open("Files/Level/level_tile_maps.txt", "r") as level_tile_maps_file:
                 
                 for line_number, tile_map in enumerate(level_tile_maps_file.readlines()):
                     # If the line number is equal to the chosen level minus one (This is because the tile maps are zero indexed in order)
@@ -141,7 +141,7 @@ class GameStatesController():
                 self.game.running = True
 
             # Load the level (Has conditions which will only perform this if the level hasn't been loaded into the game yet)
-            self.load_level(chosen_level_number = 3)
+            self.load_level(chosen_level_number = 1)
 
             # Run the game
             self.game.run(delta_time)

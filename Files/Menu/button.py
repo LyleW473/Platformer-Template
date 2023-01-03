@@ -1,6 +1,6 @@
 import pygame, random
-from settings import * 
-from generic import Generic
+from Global.settings import * 
+from Global.generic import Generic
 
 class Button(Generic):
     def __init__(self, x, y, image, surface):

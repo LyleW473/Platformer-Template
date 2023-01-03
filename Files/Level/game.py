@@ -1,7 +1,7 @@
 import pygame, os
-from settings import *
-from world_tile import WorldTile
-from player import Player
+from Global.settings import *
+from Level.world_tile import WorldTile
+from Level.player import Player
 
 class Game:
     def __init__(self):

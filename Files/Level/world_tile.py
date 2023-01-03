@@ -1,5 +1,4 @@
-import pygame
-from generic import Generic
+from Global.generic import Generic
 
 class WorldTile(Generic):
     def __init__(self, x, y, image):
