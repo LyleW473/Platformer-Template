@@ -15,6 +15,9 @@ class Game:
         # Attribute which is monitored by the game states controller
         self.running = False
 
+        # Delta time attribute is created
+        # self.delta_time = None
+
         # --------------------------------------------------------------------------------------
         # Tile map
         self.tile_size = 32
@@ -29,9 +32,21 @@ class Game:
 
         # Camera modes
         self.camera_mode = None # Can either be: Static, Follow
+
+    # --------------------------------------------------------------------------------------
+    # Misc
+    def update_objects_delta_time(self, delta_time):
+        # Used to update the delta time attributes of all objects within the tile map
+
+        # Used to update the delta time attributes of all objects within the tile map
+
+        # For all objects
+        for tile_object in self.all_tile_map_objects:
+            # Update the object's delta time
+            tile_object.delta_time = delta_time
+
     # --------------------------------------------------------------------------------------
     # Camera methods
-
 
     def set_camera_mode(self):
         # Used to change the camera mode depending on the size of the tile map
@@ -156,8 +171,12 @@ class Game:
 
                     # Draw the tile object at the camera position
                     tile_object.draw(surface = self.scaled_surface, x = (tile_object.rect.x - self.camera_position[0]), y = (tile_object.rect.y - self.camera_position[1]))
+
     
-    def run(self):
+    def run(self, delta_time):
+
+        # Update the delta time of all objects 
+        self.update_objects_delta_time(delta_time)
         
         # Fill the scaled surface with a colour
         self.scaled_surface.fill("dodgerblue4")
@@ -167,8 +186,6 @@ class Game:
 
         # Draw all objects inside the tile map / level
         self.draw_tile_map_objects()
-
-        pygame.draw.line(self.scaled_surface, "red", (self.scaled_surface.get_width() / 2, 0), (self.scaled_surface.get_width() / 2, self.scaled_surface.get_height() /  2))
 
         # Run the player methods
         self.player.run()

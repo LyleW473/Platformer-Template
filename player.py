@@ -48,29 +48,30 @@ class Player(Object):
         # Reset the animation frame counter
         self.animation_frame_counter = 0
 
-    def track_player_movement(self):
-        # The distance the player will move each frame
-        move_distance = 5
+    def handle_player_movement(self):
+
+        # The distance the player with each key press
+        move_distance = 200
         
         # If the "a" key is pressed and moving left won't place the player off the screen
-        if pygame.key.get_pressed()[pygame.K_a] and self.rect.left - move_distance > 0:
+        if pygame.key.get_pressed()[pygame.K_a] and self.rect.left - (move_distance * self.delta_time) > 0:
             # Move the player left
-            self.rect.x -= move_distance
+            self.rect.x -= move_distance * self.delta_time
 
         # If the "a" key is pressed and the player isn't at the end of the tile map
-        if pygame.key.get_pressed()[pygame.K_d] and self.rect.right + move_distance < self.last_tile_position[0]:
+        if pygame.key.get_pressed()[pygame.K_d] and self.rect.right + (move_distance * self.delta_time) < self.last_tile_position[0]:
             # Move the player right
-            self.rect.x += move_distance
+            self.rect.x += move_distance * self.delta_time
 
         # If the "w" key is pressed
         if pygame.key.get_pressed()[pygame.K_w]:
             # Move the player up
-            self.rect.y -= move_distance 
+            self.rect.y -= move_distance * self.delta_time
 
         # If the "s" key is pressed
         if pygame.key.get_pressed()[pygame.K_s]:
             # Move the player down
-            self.rect.y += move_distance
+            self.rect.y += move_distance * self.delta_time
 
     def run(self):
 
@@ -78,4 +79,4 @@ class Player(Object):
         self.play_animation()
 
         # Track player movement
-        self.track_player_movement()
+        self.handle_player_movement()

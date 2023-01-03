@@ -1,4 +1,4 @@
-import pygame
+import pygame, time
 from settings import *
 from game_states_controller import GameStatesController
 
@@ -14,20 +14,28 @@ class Main:
 
         # Set the screen to be full screen
         self.screen = pygame.display.set_mode(flags = pygame.FULLSCREEN)
-
-        # Create an object to track time
-        self.clock = pygame.time.Clock()
         
         # Create a game states controller
         self.game_states_controller = GameStatesController()
+
+        # Time
+        # Record the previous frame that was played
+        self.previous_frame = time.perf_counter()
+        
+        # Create an object to track timed
+        self.clock = pygame.time.Clock()
 
     def run(self):
 
         while True:
             
+            # Calculate delta time 
+            delta_time = time.perf_counter() - self.previous_frame
+            self.previous_frame = time.perf_counter()
+
             # Run the game states controller
             # Note: This is where we can change game states, e.g. from the menu to ingame
-            self.game_states_controller.run()
+            self.game_states_controller.run(delta_time)
             
             # -------------------------------------
             # Update display

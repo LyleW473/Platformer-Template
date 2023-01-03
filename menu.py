@@ -8,7 +8,6 @@ class Menu:
         # Screen
         self.screen = pygame.display.get_surface()
 
-
         # ------------------------------------------------------------------------------------------------------------------------------------------------
         # Buttons
         # Note: Measurements of all buttons are: (400 x 125) pixels
@@ -35,6 +34,7 @@ class Menu:
         self.arc_y = (screen_height / 2) - (self.arc_height / 2)
         self.arc_starting_angle = 0.5
         self.arc_finishing_angle = 3.14
+        self.arc_angle_increment_speed = 40
 
         # Dictionaries for the white/red arcs
         self.white_arc_dictionary = {i:[self.arc_x, self.arc_y, self.arc_width - (i * 40), self.arc_height - (i * 15), self.arc_starting_angle + (0.314 * (i * 2)), self.arc_finishing_angle, 1] for i in range(0, 4 + 1)}
@@ -101,17 +101,16 @@ class Menu:
             # If the starting angle is not equal to the finishing angle
             if arc_info[4] != arc_info[5]:
                 # Increment the starting and finishing angle
-                arc_info[4] += 0.0314
-                arc_info[5] += 0.0314
+                arc_info[4] += 0.0314 * (self.arc_angle_increment_speed - 10) * self.delta_time
+                arc_info[5] += 0.0314 * (self.arc_angle_increment_speed - 10) * self.delta_time
 
             # Moving the arc across the screen
-            arc_info[0] += 1 * self.arc_movement_direction
+            arc_info[0] += 50 * self.arc_movement_direction * self.delta_time
 
             # If the arc has reached the far right or far left of the screen
-            if arc_info[0] == screen_width + 200 or arc_info[0] == 0 - arc_info[2] - 200:
+            if (arc_info[0] >= screen_width + 200) or (arc_info[0] <= 0 - arc_info[2] - 200):
                 # Turn around and move towards the other side of the screen
                 self.arc_movement_direction *= -1
-
 
         for white_arc, arc_info in self.white_arc_dictionary.items():
             # Draw red arcs onto the screen
@@ -121,14 +120,14 @@ class Menu:
             # If the starting angle is not equal to the finishing angle
             if arc_info[4] != arc_info[5]:
                 # Increment the starting and finishing angle
-                arc_info[4] += 0.02
-                arc_info[5] += 0.02
+                arc_info[4] += 0.02 * self.arc_angle_increment_speed * self.delta_time
+                arc_info[5] += 0.02 * self.arc_angle_increment_speed * self.delta_time
 
             # Moving the arc across the screen
-            arc_info[0] += 1 * self.arc_movement_direction
+            arc_info[0] += 50 * self.arc_movement_direction * self.delta_time
 
             # If the arc has reached the far right or far left of the screen
-            if arc_info[0] == screen_width + 200 or arc_info[0] == 0 - arc_info[2] - 200:
+            if (arc_info[0] >= screen_width + 200) or (arc_info[0] <= 0 - arc_info[2] - 200):
                 # Turn around and move towards the other side of the screen
                 self.arc_movement_direction *= -1
     
@@ -139,6 +138,9 @@ class Menu:
 
             # For all buttons in the menu's button list
             for button in menu_buttons_list:
+                
+                # Set the delta time of the button
+                button.delta_time = self.delta_time
 
                 # Draw the button
                 button.draw()
@@ -146,7 +148,10 @@ class Menu:
                 # Play the button's border animation
                 button.play_border_animations()
 
-    def run(self):
+    def run(self, delta_time):
+
+        # Update delta time 
+        self.delta_time = delta_time
 
         # Retrieve the mouse position and update the mouse rect
         self.mouse_position_updating()

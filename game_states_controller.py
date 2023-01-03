@@ -127,7 +127,7 @@ class GameStatesController():
                                 self.game.running = False
                                 self.menu.show_paused_menu = True
             
-    def run(self):
+    def run(self, delta_time):
         
         # Run the event loop
         self.event_loop()
@@ -141,15 +141,15 @@ class GameStatesController():
                 self.game.running = True
 
             # Load the level (Has conditions which will only perform this if the level hasn't been loaded into the game yet)
-            self.load_level(chosen_level_number = 1)
+            self.load_level(chosen_level_number = 3)
 
             # Run the game
-            self.game.run()
+            self.game.run(delta_time)
 
 
         # Otherwise    
         else:
             # Run the menus
-            self.menu.run()
+            self.menu.run(delta_time)
 
 
