@@ -24,27 +24,53 @@ class Game:
 
         # --------------------------------------------------------------------------------------
         # Camera
-        self.players_spawning_point = [0, 0] # Stores the player's spawning point in the tile map
-        self.last_tile_position = [0, 0] # Stores the position of the last tile in the tile 
+        self.first_tile_position = [0, 0] # The first tile position will always be [0, 0]
+        self.last_tile_position = [0, 0] # Stores the position of the last tile in the tile (This is changed inside the create_objects_tile_map method)
 
+        # Camera modes
+        self.camera_mode = None # Can either be: Static, Follow
     # --------------------------------------------------------------------------------------
     # Camera methods
+
+
+    def set_camera_mode(self):
+        # Used to change the camera mode depending on the size of the tile map
+        
+        # If the width of the tile map is one room
+        if self.last_tile_position[0] <= (screen_width / 2):
+            # Set the camera mode to "Static"
+            self.camera_mode = "Static"
+        
+        # If the width of the tile map is more than one room
+        else:
+            # Set the camera mode to "Follow"
+            self.camera_mode = "Follow"
+
     def update_camera_position(self):   
+        # Moves the camera's position depending on what mode the camera has been set to
+        
+        # If the camera mode is set to "Follow"
+        if self.camera_mode == "Follow":
 
-        # If the player has not traveled half of the size of the scaled screen width from their spawning position
-        if self.players_spawning_point[0] <= self.player.rect.centerx < self.players_spawning_point[0] + (self.scaled_surface.get_width() / 2):
-            # Don't move the camera
+            # If the player is in half the width of the scaled screen from the first tile in the tile map
+            if self.first_tile_position[0] <= self.player.rect.centerx <= self.first_tile_position[0] + (self.scaled_surface.get_width() / 2):
+                # Don't move the camera
+                camera_position_x = 0
+
+            # If the player is in between half of the size of the scaled screen width from the first tile in the tile map and half the width of the scaled screen from the last tile in the tile map
+            elif self.first_tile_position[0] + (self.scaled_surface.get_width() / 2) < self.player.rect.centerx < self.last_tile_position[0] - (self.scaled_surface.get_width() / 2):
+                # Set the camera to always follow the player
+                camera_position_x = self.player.rect.centerx - (self.scaled_surface.get_width() / 2)
+
+            # If the player is half the scaled screen width away from the last tile in the tile map
+            elif self.player.rect.centerx > self.last_tile_position[0] - (self.scaled_surface.get_width() / 2):
+                # Set the camera to stop moving and be locked at half the size of the scaled screen width from the last tile in the tile map
+                camera_position_x = self.last_tile_position[0] - self.scaled_surface.get_width() 
+
+        # If the camera mode is set to "Static"
+        elif self.camera_mode == "Static":
+            # The camera's x position will always be at 0
             camera_position_x = 0
-
-        # If the player has traveled half of the size of the scaled screen width from their spawning position and is not half the width of the scaled screen from the last tile in the tile map
-        elif (self.scaled_surface.get_width() / 2) < self.player.rect.centerx < self.last_tile_position[0] - (self.scaled_surface.get_width() / 2):
-            # Set the camera to always follow the player
-            camera_position_x = self.player.rect.centerx - (self.scaled_surface.get_width() / 2)
-
-        # If the player is half the scaled screen width from the last tile in the tile map
-        elif self.player.rect.centerx > self.last_tile_position[0] - (self.scaled_surface.get_width() / 2):
-            # Set the camera to stop moving and be locked at half the size of the scaled screen width from the last tile in the tile map
-            camera_position_x = self.last_tile_position[0] - self.scaled_surface.get_width() 
         
         # Update the camera position
         """
@@ -53,8 +79,8 @@ class Game:
             - Once the player reaches the center of the screen, then the camera will always follow the player
             - Until the player reaches half the size of the scaled screen width from the last tile in the tile map
         - The camera's y position 
-            - Will always be the player's rect position minus half the size of the scaled screen height """
-        self.camera_position = [camera_position_x, self.player.rect.y - (self.scaled_surface.get_height() / 2)]
+            - Will always be at 0 """
+        self.camera_position = [camera_position_x,  0]
 
     # --------------------------------------------------------------------------------------
     # Tile map methods
@@ -89,9 +115,6 @@ class Game:
                         # Set the player as an attribute
                         self.player = player    
 
-                        # Set the attribute of the player's spawning point to where the player was placed inside the tile map, this is for the camera effect
-                        self.players_spawning_point = [self.player.rect.x, self.player.rect.y]
-
                     # World tile 1
                     case 2:
                         # Create a world tile
@@ -100,11 +123,12 @@ class Game:
                         # Add it to the list of all tile map objects
                         self.all_tile_map_objects.append(world_tile)
 
-                        # Save the last tile position so that we can update the camera and limit the player's movement
-                        self.last_tile_position = [column_index * self.tile_size, row_index * self.tile_size]
+        # Save the last tile position so that we can update the camera and limit the player's movement
+        self.last_tile_position = [len(non_transformed_tile_map[0]) * self.tile_size, len(non_transformed_tile_map) * self.tile_size]
+        self.player.last_tile_position = self.last_tile_position
 
-                        # Pass this position to the player class so that we can limit the player movement
-                        self.player.last_tile_position = self.last_tile_position
+        # Set the camera mode 
+        self.set_camera_mode()
 
     def draw_tile_map_objects(self):
 
@@ -119,7 +143,7 @@ class Game:
     def run(self):
         
         # Fill the scaled surface with a colour
-        self.scaled_surface.fill("white")
+        self.scaled_surface.fill("dodgerblue4")
 
         # Update the camera position 
         self.update_camera_position()

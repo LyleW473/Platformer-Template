@@ -62,6 +62,16 @@ class Player(Object):
             # Move the player right
             self.rect.x += move_distance
 
+        # If the "w" key is pressed
+        if pygame.key.get_pressed()[pygame.K_w]:
+            # Move the player up
+            self.rect.y -= move_distance 
+
+        # If the "s" key is pressed
+        if pygame.key.get_pressed()[pygame.K_s]:
+            # Move the player down
+            self.rect.y += move_distance
+
     def run(self):
 
         # Play animations
