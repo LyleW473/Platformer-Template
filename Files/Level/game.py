@@ -27,23 +27,27 @@ class Game:
 
         # --------------------------------------------------------------------------------------
         # Camera
-        self.first_tile_position = [0, 0] # The first tile position will always be [0, 0]
         self.last_tile_position = [0, 0] # Stores the position of the last tile in the tile (This is changed inside the create_objects_tile_map method)
 
         # Camera modes
         self.camera_mode = None # Can either be: Static, Follow
 
+        # --------------------------------------------------------------------------------------
+        # Groups
+        self.all_tile_map_objects_group = pygame.sprite.Group()
+        self.world_tiles_group = pygame.sprite.Group()
+        # self.player_group = pygame.sprite.GroupSingle(self.player) This was created inside the create_objects_tile_map method
+
     # --------------------------------------------------------------------------------------
-    # Misc
+    # Misc methods
+
     def update_objects_delta_time(self, delta_time):
         # Used to update the delta time attributes of all objects within the tile map
 
-        # Used to update the delta time attributes of all objects within the tile map
-
         # For all objects
-        for tile_object in self.all_tile_map_objects:
+        for tile_map_object in self.all_tile_map_objects_group:
             # Update the object's delta time
-            tile_object.delta_time = delta_time
+            tile_map_object.delta_time = delta_time
 
     # --------------------------------------------------------------------------------------
     # Camera methods
@@ -62,22 +66,22 @@ class Game:
             self.camera_mode = "Follow"
 
     def update_camera_position(self):   
-        # Moves the camera's position depending on what mode the camera has been set to
+        # Moves the camera's position depending on what mode the camera has been set tow
         
         # If the camera mode is set to "Follow"
         if self.camera_mode == "Follow":
 
             # If the player is in half the width of the scaled screen from the first tile in the tile map
-            if self.first_tile_position[0] <= self.player.rect.centerx <= self.first_tile_position[0] + (self.scaled_surface.get_width() / 2):
+            if 0 <= self.player.rect.centerx <= (self.scaled_surface.get_width() / 2):
                 # Don't move the camera
                 camera_position_x = 0
 
             # If the player is in between half of the size of the scaled screen width from the first tile in the tile map and half the width of the scaled screen from the last tile in the tile map
-            elif self.first_tile_position[0] + (self.scaled_surface.get_width() / 2) < self.player.rect.centerx < self.last_tile_position[0] - (self.scaled_surface.get_width() / 2):
+            elif 0+ (self.scaled_surface.get_width() / 2) < self.player.rect.centerx < self.last_tile_position[0] - (self.scaled_surface.get_width() / 2):
                 # Set the camera to always follow the player
                 camera_position_x = self.player.rect.centerx - (self.scaled_surface.get_width() / 2)
 
-            # If the player is half the scaled screen width away from the last tile in the tile map
+            # If the player is half the scaled screen width away from the last tile in the tile mapsw
             elif self.player.rect.centerx >= self.last_tile_position[0] - (self.scaled_surface.get_width() / 2):
                 # Set the camera to stop moving and be locked at half the size of the scaled screen width from the last tile in the tile map
                 camera_position_x = self.last_tile_position[0] - self.scaled_surface.get_width() 
@@ -97,8 +101,12 @@ class Game:
             - Will always be at 0 """
         self.camera_position = [camera_position_x,  0]
 
+        # Update the player's camera position attribute so that tile rects are correctly aligned
+        self.player.camera_position = self.camera_position
+
     # --------------------------------------------------------------------------------------
     # Tile map methods
+
     def load_tile_map_images(self):
 
         # Create a dictionary filled with all of the tiles' images
@@ -107,9 +115,6 @@ class Game:
 
     def create_objects_tile_map(self, non_transformed_tile_map):
         # Note: The objects tile map is created by the gamestates controller within the load_level method
-
-        # Create an attribute which will hold all of the objects in the tile map
-        self.all_tile_map_objects = []
 
         # For all rows of objects in the tile map
         for row_index, row in enumerate(non_transformed_tile_map):
@@ -122,56 +127,79 @@ class Game:
                     # Player
                     case 1:
                         # Create the player
-                        player = Player(x = (column_index * self.tile_size), y = (row_index * self.tile_size))
+                        self.player = Player(x = (column_index * self.tile_size), y = (row_index * self.tile_size), surface = self.scaled_surface)
 
-                        # Add it to the list of all tile map objects
-                        self.all_tile_map_objects.append(player)
+                        # Add the player to its group
+                        self.player_group = pygame.sprite.GroupSingle(self.player)
 
-                        # Set the player as an attribute
-                        self.player = player    
+                        # Add the player to the group of all tile map objects
+                        self.all_tile_map_objects_group.add(self.player)
 
                     # World tile 1
                     case 2:
                         # Create a world tile
                         world_tile = WorldTile(x = (column_index * self.tile_size), y = (row_index * self.tile_size), image = pygame.transform.smoothscale(self.tile_images[1], (self.tile_size, self.tile_size)) )
 
-                        # Add it to the list of all tile map objects
-                        self.all_tile_map_objects.append(world_tile)
+                        # Add the world tile to its group
+                        self.world_tiles_group.add(world_tile)
+
+                        # Add it to the group of all tile map objects
+                        self.all_tile_map_objects_group.add(world_tile)
 
         # Save the last tile position so that we can update the camera and limit the player's movement
         self.last_tile_position = [len(non_transformed_tile_map[0]) * self.tile_size, len(non_transformed_tile_map) * self.tile_size]
         self.player.last_tile_position = self.last_tile_position
 
+        # Transfer the world tiles group to the player so that we can detect collisions within the Player class
+        self.player.world_tiles_group = self.world_tiles_group
+
         # Set the camera mode 
         self.set_camera_mode()
 
     def draw_tile_map_objects(self):
-        # Calls the draw methods of all objects in the level, if they follow the conditions
 
-        # For all tile objects in the level
-        for tile_object in self.all_tile_map_objects:
-            
+        # Calls the draw methods of all objects in the level
+
+        # ---------------------------------------------
+        # World tiles
+
+        for world_tile in self.world_tiles_group:
+
             # Check the x co-ordinate of the camera
             match self.camera_position[0]:
                  
                 # If the camera is positioned at the start of the tile map and the object is within the boundaries of the screen
-                case 0 if tile_object.rect.x <= self.scaled_surface.get_width():
+                case 0 if world_tile.rect.x <= self.scaled_surface.get_width():
 
                     # Draw all tile objects on the screen
-                    tile_object.draw(surface = self.scaled_surface, x = (tile_object.rect.x - self.camera_position[0]), y = (tile_object.rect.y - self.camera_position[1]))
-                
+                    world_tile.draw(surface = self.scaled_surface, x = (world_tile.rect.x - self.camera_position[0]), y = (world_tile.rect.y - self.camera_position[1]))
+
                 # If the camera is positioned at the end of the tile map and the tile object is within the boundaries of the screen
-                case _ if (self.last_tile_position[0] - self.scaled_surface.get_width()) == self.camera_position[0] and tile_object.rect.x >= self.camera_position[0]:
+                case _ if (self.last_tile_position[0] - self.scaled_surface.get_width()) == self.camera_position[0] and world_tile.rect.x >= self.camera_position[0]:
 
                     # Draw all tile objects on the screen
-                    tile_object.draw(surface = self.scaled_surface, x = (tile_object.rect.x - self.camera_position[0]), y = (tile_object.rect.y - self.camera_position[1]))
+                    world_tile.draw(surface = self.scaled_surface, x = (world_tile.rect.x - self.camera_position[0]), y = (world_tile.rect.y - self.camera_position[1]))
 
                 # If the camera is neither at the start or the end of the tile map and the object is within the boundaries of the screen
-                case _ if self.player.rect.left - ((self.scaled_surface.get_width() / 2) + self.tile_size)  <= tile_object.rect.x <= self.player.rect.right + (self.scaled_surface.get_width() / 2): 
+                case _ if self.player.rect.left - ((self.scaled_surface.get_width() / 2) + self.tile_size)  <= world_tile.rect.x <= self.player.rect.right + (self.scaled_surface.get_width() / 2): 
 
                     # Draw the tile object at the camera position
-                    tile_object.draw(surface = self.scaled_surface, x = (tile_object.rect.x - self.camera_position[0]), y = (tile_object.rect.y - self.camera_position[1]))
-  
+                    world_tile.draw(surface = self.scaled_surface, x = (world_tile.rect.x - self.camera_position[0]), y = (world_tile.rect.y - self.camera_position[1]))
+
+    def handle_collisions(self):
+        
+        # Save for later (for enemies, etc.)
+        # # --------------------------------------------------------------------------------------
+        # # Look for a slightly less accurate collision check between the tile and the player sprite
+        # if pygame.sprite.spritecollide(self, self.world_tiles_group, False):
+
+        #     # Create a list of all the tiles that the player collided (more accurate collision check)
+        #     if pygame.sprite.spritecollide(self, self.world_tiles_group, False, pygame.sprite.collide_mask):
+        pass
+
+    # --------------------------------------------------------------------------------------
+    # Gameplay methods
+
     def run(self, delta_time):
 
         # Update the delta time of all objects 
@@ -186,8 +214,11 @@ class Game:
         # Draw all objects inside the tile map / level
         self.draw_tile_map_objects()
 
+        # # Handle collisions between all objects in the level
+        # self.handle_collisions()
+
         # Run the player methods
         self.player.run()
-        
+
         # Draw the scaled surface onto the screen
         self.screen.blit(pygame.transform.scale(self.scaled_surface, (screen_width, screen_height)), (0, 0))
