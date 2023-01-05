@@ -34,8 +34,8 @@ class Game:
 
         # --------------------------------------------------------------------------------------
         # Groups
-        self.all_tile_map_objects_group = pygame.sprite.Group()
-        self.world_tiles_group = pygame.sprite.Group()
+        self.all_tile_map_objects_group = pygame.sprite.Group() # Group for all tile map objects, including the player
+        self.world_tiles_dict = {} # Dictionary used to hold all the world tiles 
         # self.player_group = pygame.sprite.GroupSingle(self.player) This was created inside the create_objects_tile_map method
 
     # --------------------------------------------------------------------------------------
@@ -103,7 +103,7 @@ class Game:
 
         # Update the player's camera position attribute so that tile rects are correctly aligned
         self.player.camera_position = self.camera_position
-
+     
     # --------------------------------------------------------------------------------------
     # Tile map methods
 
@@ -115,6 +115,9 @@ class Game:
 
     def create_objects_tile_map(self, non_transformed_tile_map):
         # Note: The objects tile map is created by the gamestates controller within the load_level method
+
+        # Counter used as the key in self.world_tiles_dict, (e.g. Tile 1, Tile 2, Tile 3...)
+        world_tile_counter = 1 
 
         # For all rows of objects in the tile map
         for row_index, row in enumerate(non_transformed_tile_map):
@@ -140,18 +143,18 @@ class Game:
                         # Create a world tile
                         world_tile = WorldTile(x = (column_index * self.tile_size), y = (row_index * self.tile_size), image = pygame.transform.smoothscale(self.tile_images[1], (self.tile_size, self.tile_size)))
 
-                        # Add the world tile to its group
-                        self.world_tiles_group.add(world_tile)
+                        # Add the world tile to the world tiles dictionary
+                        self.world_tiles_dict[world_tile_counter] = world_tile
 
                         # Add it to the group of all tile map objects
                         self.all_tile_map_objects_group.add(world_tile)
 
+                        # Increment the world tile counter
+                        world_tile_counter += 1
+
         # Save the last tile position so that we can update the camera and limit the player's movement
         self.last_tile_position = [len(non_transformed_tile_map[0]) * self.tile_size, len(non_transformed_tile_map) * self.tile_size]
         self.player.last_tile_position = self.last_tile_position
-
-        # Transfer the world tiles group to the player so that we can detect collisions within the Player class
-        self.player.world_tiles_group = self.world_tiles_group
 
         # Set the camera mode 
         self.set_camera_mode()
@@ -163,13 +166,11 @@ class Game:
         # ---------------------------------------------
         # World tiles
 
-        for world_tile in self.world_tiles_group:
-
-            #world_tile.draw(surface = self.scaled_surface, x = world_tile.rect.x , y = world_tile.rect.y )
+        for world_tile in self.world_tiles_dict.values():
 
             # Check the x co-ordinate of the camera
             match self.camera_position[0]:
-                 
+
                 # If the camera is positioned at the start of the tile map and the object is within the boundaries of the screen
                 case 0 if world_tile.rect.x <= self.scaled_surface.get_width():
 
@@ -188,6 +189,28 @@ class Game:
                     # Draw the tile object at the camera position
                     world_tile.draw(surface = self.scaled_surface, x = (world_tile.rect.x - self.camera_position[0]), y = (world_tile.rect.y - self.camera_position[1]))
 
+    # --------------------------------------------------------------------------------------
+    # Gameplay methods
+
+    def find_neighbouring_tiles_to_player(self):
+        # Used for greater performance, as we are only checking for collisions with tiles near the player
+
+        # For each world tile in the world tiles
+        for world_tile_number, world_tile in self.world_tiles_dict.items():
+
+            # If the world tile is within 1 tiles of the player (horizontally and vertically)
+            if (self.player.rect.x  - (self.tile_size) <= world_tile.rect.x <= self.player.rect.x + (self.tile_size)) and (self.player.rect.y - (self.tile_size) <= world_tile.rect.y <= (self.player.rect.y + self.tile_size)):
+
+                # Add it to the player's neighbouring tiles dictionary
+                self.player.neighbouring_tiles_dict[world_tile_number] = world_tile
+
+            # If the world tile is not within 1 tiles of the player (horizontally and vertically)
+            else:
+                # If the world tile is inside the neighbouring tiles dict's values
+                if world_tile in self.player.neighbouring_tiles_dict.values():
+                    # Remove the world tile from the neighbouring tiles dictionary
+                    self.player.neighbouring_tiles_dict.pop(world_tile_number)
+
     def handle_collisions(self):
         
         # Save for later (for enemies, etc.)
@@ -198,9 +221,6 @@ class Game:
         #     # Create a list of all the tiles that the player collided (more accurate collision check)
         #     if pygame.sprite.spritecollide(self, self.world_tiles_group, False, pygame.sprite.collide_mask):
         pass
-
-    # --------------------------------------------------------------------------------------
-    # Gameplay methods
 
     def run(self, delta_time):
 
@@ -218,6 +238,9 @@ class Game:
 
         # # Handle collisions between all objects in the level
         # self.handle_collisions()
+
+        # Find the player's neighbouring tiles
+        self.find_neighbouring_tiles_to_player()
 
         # Run the player methods
         self.player.run()

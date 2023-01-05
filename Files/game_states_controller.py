@@ -141,7 +141,7 @@ class GameStatesController():
                 self.game.running = True
 
             # Load the level (Has conditions which will only perform this if the level hasn't been loaded into the game yet)
-            self.load_level(chosen_level_number = 3)
+            self.load_level(chosen_level_number = 2)
 
             # Run the game
             self.game.run(delta_time)
