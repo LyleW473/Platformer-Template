@@ -99,7 +99,7 @@ class Game:
             - Until the player reaches half the size of the scaled screen width from the last tile in the tile map
         - The camera's y position 
             - Will always be at 0 """
-        self.camera_position = [camera_position_x,  0]
+        self.camera_position = [camera_position_x, 0]
 
         # Update the player's camera position attribute so that tile rects are correctly aligned
         self.player.camera_position = self.camera_position
@@ -138,7 +138,7 @@ class Game:
                     # World tile 1
                     case 2:
                         # Create a world tile
-                        world_tile = WorldTile(x = (column_index * self.tile_size), y = (row_index * self.tile_size), image = pygame.transform.smoothscale(self.tile_images[1], (self.tile_size, self.tile_size)) )
+                        world_tile = WorldTile(x = (column_index * self.tile_size), y = (row_index * self.tile_size), image = pygame.transform.smoothscale(self.tile_images[1], (self.tile_size, self.tile_size)))
 
                         # Add the world tile to its group
                         self.world_tiles_group.add(world_tile)
@@ -164,6 +164,8 @@ class Game:
         # World tiles
 
         for world_tile in self.world_tiles_group:
+
+            #world_tile.draw(surface = self.scaled_surface, x = world_tile.rect.x , y = world_tile.rect.y )
 
             # Check the x co-ordinate of the camera
             match self.camera_position[0]:

@@ -72,7 +72,6 @@ class Player(Generic, pygame.sprite.Sprite):
 
     # ---------------------------------------------------------------------------------
     # Movement
-
     def handle_player_movement(self):
 
         # The distance the player travels with each key press
@@ -118,7 +117,7 @@ class Player(Generic, pygame.sprite.Sprite):
                                             self.rect.x - (self.camera_position[0]),
                                             self.rect.y - (self.camera_position[1]), 
                                             self.rect.y - (self.camera_position[1]),
-                                            self.rect.y + self.image.get_height(),
+                                            self.rect.y - (self.camera_position[1]) + self.image.get_height(),
                                             self.rect.x - (self.camera_position[0]),
                                             (self.rect.x - (self.camera_position[0])) + self.image.get_width()
                                             
@@ -128,17 +127,23 @@ class Player(Generic, pygame.sprite.Sprite):
         """ 
         # (x and left), (y and top), bottom, right
         self.actual_player_position = [
-                                            self.rect.x - (self.camera_position[0]),
-                                            self.rect.y - (self.camera_position[1]), 
-                                            self.rect.y + self.image.get_height(),
-                                            (self.rect.x - (self.camera_position[0])) + self.image.get_width()
+                                            self.rect.x - self.camera_position[0],
+                                            self.rect.y - self.camera_position[1], 
+                                            (self.rect.y - self.camera_position[1]) + self.image.get_height(),
+                                            (self.rect.x - self.camera_position[0]) + self.image.get_width()
                                             ]            
+
+        #pygame.draw.rect(self.surface, "pink", (self.actual_player_position[0], self.actual_player_position[1], self.image.get_width(), self.image.get_height()))
         # For each world tile
         for tile in self.world_tiles_group:
-
+            
+            #print(tile.rect.y)
+            
             # Create a new tile rect, which is a rectangle which holds the rectangle positions of the tile as it is being seen on screen
+            # Note: Add optimisation above where it only checks tiles within the screen of the player
             camera_tile_rect = pygame.Rect(tile.rect.x - self.camera_position[0], tile.rect.y - self.camera_position[1], 32, 32)
-    
+            pygame.draw.rect(self.surface, "green", camera_tile_rect)
+            
             # If the player is trying to move along the x axis
             if movement_direction[0] == "x":
                 
@@ -150,7 +155,7 @@ class Player(Generic, pygame.sprite.Sprite):
                     
                     # If the player is trying to move left
                     if movement_direction[1] == "left":
-                        # Move the player as much to the left as we can before they collide with the tile
+                        # Move the player as much to the left as much as we can before they collide with the tile
                         return self.move_distance - (camera_tile_rect.right - (self.actual_player_position[0] - self.move_distance))
 
                     # If the player is trying to move right
@@ -169,14 +174,41 @@ class Player(Generic, pygame.sprite.Sprite):
                         return self.move_distance
                     
                     elif movement_direction[1] == "right":
-                        # Move the player as much as to the right as we can before they collide with the tile
+                        # Move the player to the right as much as we can before they collide with the tile
                         return self.move_distance - ((self.actual_player_position[3] + self.move_distance) - camera_tile_rect.left)
 
-            # If the player is trying to move along the y axis
-            elif movement_direction[0] == "y":
+            pygame.draw.rect(self.surface, "pink", (self.actual_player_position[0], self.actual_player_position[1] + self.move_distance, self.image.get_width(), self.image.get_height()), 2)
+            if movement_direction[0] == "y":
+                
+                # If the bottom of the player is colliding with the top of the tile
+                if camera_tile_rect.colliderect(self.actual_player_position[0], self.actual_player_position[1] + self.move_distance, self.image.get_width(), self.image.get_height()):
 
-                # Testing phase
-                return self.move_distance
+                    pygame.draw.rect(self.surface, "blue", camera_tile_rect)
+                    
+                    # If the player is trying to move up
+                    if movement_direction[1] == "up":
+                        # Let the player move up
+                        return self.move_distance
+
+                    # If the player is moving down
+                    elif movement_direction[1] == "down":
+                        # Move the player down as much as we can before they collide with the tile
+                        return self.move_distance - ((self.actual_player_position[2] + self.move_distance) - camera_tile_rect.top)
+
+                # If the bottom of the player is colliding with the top of the tile
+                if camera_tile_rect.colliderect(self.actual_player_position[0], self.actual_player_position[1] - self.move_distance, self.image.get_width(), self.image.get_height()):
+
+                    pygame.draw.rect(self.surface, "blue", camera_tile_rect)
+
+                    # If the player is trying to move up
+                    if movement_direction[1] == "up":
+                        # Move the player up as much as we can before they collide with the tile
+                        return self.move_distance - (camera_tile_rect.bottom - (self.actual_player_position[1] - self.move_distance))
+
+                    # If the player is trying to move down
+                    if movement_direction[1] == "down":
+                        # Let the player move down
+                        return self.move_distance
 
         # If it still hasn't exited the method by now, then the player must not be colliding with anything
         return self.move_distance
