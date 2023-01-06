@@ -195,11 +195,24 @@ class Game:
     def find_neighbouring_tiles_to_player(self):
         # Used for greater performance, as we are only checking for collisions with tiles near the player
 
+        # Grid lines to show neighbouring tiles
+        pygame.draw.line(self.scaled_surface, "white", (0 - self.camera_position[0], self.player.rect.top), (screen_width, self.player.rect.top))
+        pygame.draw.line(self.scaled_surface, "white", (0 - self.camera_position[0], self.player.rect.bottom), (screen_width, self.player.rect.bottom))
+
+        pygame.draw.line(self.scaled_surface, "red", (0 - self.camera_position[0], self.player.rect.top - self.tile_size * 1), (screen_width, self.player.rect.top - self.tile_size * 1))
+        pygame.draw.line(self.scaled_surface, "red", (0 - self.camera_position[0], self.player.rect.bottom + self.tile_size * 1), (screen_width, self.player.rect.bottom + self.tile_size * 1))
+
+        pygame.draw.line(self.scaled_surface, "pink", ((self.player.rect.left - self.tile_size) * 1 - self.camera_position[0], 0), ((self.player.rect.left - self.tile_size) * 1 - self.camera_position[0], screen_height))
+        pygame.draw.line(self.scaled_surface, "pink", ((self.player.rect.right + self.tile_size) * 1 - self.camera_position[0], 0), ((self.player.rect.right + self.tile_size) * 1 - self.camera_position[0], screen_height))
+
+
+        pygame.draw.rect(self.scaled_surface, "purple", (self.player.rect.x - self.camera_position[0], self.player.rect.y - self.camera_position[1], self.player.image.get_width(), self.player.image.get_height()), 5)
+        
         # For each world tile in the world tiles
         for world_tile_number, world_tile in self.world_tiles_dict.items():
 
             # If the world tile is within 1 tiles of the player (horizontally and vertically)
-            if (self.player.rect.x  - (self.tile_size) <= world_tile.rect.x <= self.player.rect.x + (self.tile_size)) and (self.player.rect.y - (self.tile_size) <= world_tile.rect.y <= (self.player.rect.y + self.tile_size)):
+            if (self.player.rect.left  - (self.tile_size) <= world_tile.rect.centerx <= self.player.rect.right + (self.tile_size)) and (self.player.rect.top - (self.tile_size * 1) <= world_tile.rect.centery <= (self.player.rect.bottom + self.tile_size * 1)):
 
                 # Add it to the player's neighbouring tiles dictionary
                 self.player.neighbouring_tiles_dict[world_tile_number] = world_tile
