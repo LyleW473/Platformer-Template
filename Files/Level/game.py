@@ -144,7 +144,10 @@ class Game:
                         world_tile = WorldTile(x = (column_index * self.tile_size), y = (row_index * self.tile_size), image = pygame.transform.smoothscale(self.tile_images[1], (self.tile_size, self.tile_size)))
 
                         # Add the world tile to the world tiles dictionary
-                        self.world_tiles_dict[world_tile_counter] = world_tile
+                        # The key is the world tile because we use pygame.rect.collidedict in other areas of the code, the value is the number of the world tile
+
+                        #self.world_tiles_dict[world_tile_counter] = world_tile
+                        self.world_tiles_dict[world_tile] = world_tile_counter
 
                         # Add it to the group of all tile map objects
                         self.all_tile_map_objects_group.add(world_tile)
@@ -169,7 +172,7 @@ class Game:
         # ---------------------------------------------
         # World tiles
 
-        for world_tile in self.world_tiles_dict.values():
+        for world_tile in self.world_tiles_dict.keys():
 
             # Check the x co-ordinate of the camera
             match self.camera_position[0]:
@@ -213,7 +216,7 @@ class Game:
         pygame.draw.rect(self.scaled_surface, "purple", (self.player.rect.x - self.camera_position[0], self.player.rect.y - self.camera_position[1], self.player.image.get_width(), self.player.image.get_height()), 0)
         
         # For each world tile in the world tiles
-        for world_tile_number, world_tile in self.world_tiles_dict.items():
+        for world_tile, world_tile_number in self.world_tiles_dict.items():
 
             # If the world tile is within 1 tiles of the player (horizontally and vertically)
             if (self.player.rect.left  - (self.tile_size) <= world_tile.rect.centerx <= self.player.rect.right + (self.tile_size)) and (self.player.rect.top - (self.tile_size * 1) <= world_tile.rect.centery <= (self.player.rect.bottom + self.tile_size * 1)):
@@ -237,18 +240,18 @@ class Game:
         pygame.draw.rect(self.scaled_surface, "red", (finding_closest_ground_tile_rect.x - self.camera_position[0], finding_closest_ground_tile_rect.y - self.camera_position[1], finding_closest_ground_tile_rect.width, finding_closest_ground_tile_rect.height))
 
         # Check for tiles inside the world tiles dictionary for collisions 
-        closest_ground_tile_rect = finding_closest_ground_tile_rect.collidedict({(self.world_tiles_dict[i].rect.x, self.world_tiles_dict[i].rect.y, TILE_SIZE, TILE_SIZE) : i for i in range(1, len(self.world_tiles_dict))})
+        closest_ground_tile = finding_closest_ground_tile_rect.collidedict(self.world_tiles_dict)
 
         # If there is no closest ground tile, i.e. the player is floating in mid-air
-        if closest_ground_tile_rect == None:
+        if closest_ground_tile == None:
             # Set the player's closest ground tile as None
             self.player.closest_ground_tile = None
         
         # If there is a closest ground tile
-        if closest_ground_tile_rect != None:
-            # Set that players closest ground tile as the closest ground tile found
-            self.player.closest_ground_tile = self.world_tiles_dict[closest_ground_tile_rect[1]]
-            pygame.draw.rect(self.scaled_surface, "white", pygame.Rect(closest_ground_tile_rect[0][0] - self.camera_position[0], closest_ground_tile_rect[0][1] - self.camera_position[1], closest_ground_tile_rect[0][2], closest_ground_tile_rect[0][3]))
+        if closest_ground_tile != None:
+            # Set that players closest ground tile as the closest ground tile found (closest_ground_tile[0] = The world tile, closest_ground_tile[1] = The world tile number)
+            self.player.closest_ground_tile = closest_ground_tile[0]
+            pygame.draw.rect(self.scaled_surface, "white", pygame.Rect(closest_ground_tile[0].rect.x - self.camera_position[0], closest_ground_tile[0].rect.y- self.camera_position[1], closest_ground_tile[0].rect.width, closest_ground_tile[0].rect.height))
     
     def handle_collisions(self):
         

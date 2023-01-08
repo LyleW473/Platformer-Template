@@ -129,7 +129,7 @@ class Player(Generic, pygame.sprite.Sprite):
         self.move_distance_x =  min(int(300 * self.delta_time), 4)
 
         # If the "a" key is pressed and moving left won't place the player off the screen
-        if pygame.key.get_pressed()[pygame.K_a] and self.rect.left > 0: #and self.rect.left - self.move_distance_x > 0:
+        if pygame.key.get_pressed()[pygame.K_a] and self.rect.left > 0:
         
             # Move the player left
             self.rect.x -= self.handle_tile_collisions(movement_direction = ("x", "left"), movement_speed = self.move_distance_x)
@@ -273,7 +273,7 @@ class Player(Generic, pygame.sprite.Sprite):
         for tile_number, tile in self.neighbouring_tiles_dict.items():
             
             # Create a new tile rect, which is a rectangle which holds the rectangle positions of the tile as it is being seen on screen
-            camera_tile_rect = pygame.Rect(tile.rect.x - self.camera_position[0], tile.rect.y - self.camera_position[1], 32, 32)
+            camera_tile_rect = pygame.Rect(tile.rect.x - self.camera_position[0], tile.rect.y - self.camera_position[1], TILE_SIZE, TILE_SIZE)
 
             # If the player is trying to move along the x axis
             if movement_direction[0] == "x":
@@ -296,7 +296,7 @@ class Player(Generic, pygame.sprite.Sprite):
                         if tile_number + 1 in self.neighbouring_tiles_dict.keys():
                             
                             # Create a new rect for that adjacent tile
-                            adjacent_tile_rect_to_player = pygame.Rect(self.neighbouring_tiles_dict[tile_number + 1].rect.x - self.camera_position[0], self.neighbouring_tiles_dict[tile_number + 1].rect.y - self.camera_position[1], 32, 32)
+                            adjacent_tile_rect_to_player = pygame.Rect(self.neighbouring_tiles_dict[tile_number + 1].rect.x - self.camera_position[0], self.neighbouring_tiles_dict[tile_number + 1].rect.y - self.camera_position[1], TILE_SIZE, TILE_SIZE)
 
                             # If there is a collision between the player and the tile to the right of the player
                             if adjacent_tile_rect_to_player.colliderect((self.actual_player_position[0] + movement_speed ), self.actual_player_position[1], self.image.get_width(), self.image.get_height()):
@@ -316,7 +316,7 @@ class Player(Generic, pygame.sprite.Sprite):
                         if (tile_number - 1) in self.neighbouring_tiles_dict.keys():
                             
                             # Create a new rect for that adjacent tile
-                            adjacent_tile_rect_to_player = pygame.Rect(self.neighbouring_tiles_dict[tile_number - 1].rect.x - self.camera_position[0], self.neighbouring_tiles_dict[tile_number - 1].rect.y - self.camera_position[1], 32, 32)
+                            adjacent_tile_rect_to_player = pygame.Rect(self.neighbouring_tiles_dict[tile_number - 1].rect.x - self.camera_position[0], self.neighbouring_tiles_dict[tile_number - 1].rect.y - self.camera_position[1], TILE_SIZE, TILE_SIZE)
 
                             # If there is a collision between the player and the tile to the left of the player
                             if adjacent_tile_rect_to_player.colliderect((self.actual_player_position[0] - movement_speed ), self.actual_player_position[1], self.image.get_width(), self.image.get_height()):
