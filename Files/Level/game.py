@@ -20,7 +20,7 @@ class Game:
 
         # --------------------------------------------------------------------------------------
         # Tile map
-        self.tile_size = 32
+        self.tile_size = TILE_SIZE
 
         # Load the tile map images
         self.load_tile_map_images()
@@ -156,6 +156,9 @@ class Game:
         self.last_tile_position = [len(non_transformed_tile_map[0]) * self.tile_size, len(non_transformed_tile_map) * self.tile_size]
         self.player.last_tile_position = self.last_tile_position
 
+        # Save a copy of the world tiles dict for the player, this is so that we can control the gravity strength when at greater heights
+        self.player.world_tiles_dict = self.world_tiles_dict
+
         # Set the camera mode 
         self.set_camera_mode()
 
@@ -193,7 +196,8 @@ class Game:
     # Gameplay methods
 
     def find_neighbouring_tiles_to_player(self):
-        # Used for greater performance, as we are only checking for collisions with tiles near the player
+
+        # Used to find the closest tiles to the player to check for collisions (Used for greater performance, as we are only checking for collisions with tiles near the player)
 
         # Grid lines to show neighbouring tiles
         pygame.draw.line(self.scaled_surface, "white", (0 - self.camera_position[0], self.player.rect.top), (screen_width, self.player.rect.top))
@@ -224,6 +228,28 @@ class Game:
                     # Remove the world tile from the neighbouring tiles dictionary
                     self.player.neighbouring_tiles_dict.pop(world_tile_number)
 
+    def find_closest_ground_tile_to_player(self):
+
+        # Used to find the closest ground tile to the player, so that we can control the strength of gravity
+        
+        # Create a rect used for finding the closest ground tile, which starts from the bottom of the player to the bottom of the screen
+        finding_closest_ground_tile_rect = pygame.Rect(self.player.rect.x, self.player.rect.bottom, self.player.image.get_width(), self.scaled_surface.get_height() - self.player.rect.bottom)
+        pygame.draw.rect(self.scaled_surface, "red", (finding_closest_ground_tile_rect.x - self.camera_position[0], finding_closest_ground_tile_rect.y - self.camera_position[1], finding_closest_ground_tile_rect.width, finding_closest_ground_tile_rect.height))
+
+        # Check for tiles inside the world tiles dictionary for collisions 
+        closest_ground_tile_rect = finding_closest_ground_tile_rect.collidedict({(self.world_tiles_dict[i].rect.x, self.world_tiles_dict[i].rect.y, TILE_SIZE, TILE_SIZE) : i for i in range(1, len(self.world_tiles_dict))})
+
+        # If there is no closest ground tile, i.e. the player is floating in mid-air
+        if closest_ground_tile_rect == None:
+            # Set the player's closest ground tile as None
+            self.player.closest_ground_tile = None
+        
+        # If there is a closest ground tile
+        if closest_ground_tile_rect != None:
+            # Set that players closest ground tile as the closest ground tile found
+            self.player.closest_ground_tile = self.world_tiles_dict[closest_ground_tile_rect[1]]
+            pygame.draw.rect(self.scaled_surface, "white", pygame.Rect(closest_ground_tile_rect[0][0] - self.camera_position[0], closest_ground_tile_rect[0][1] - self.camera_position[1], closest_ground_tile_rect[0][2], closest_ground_tile_rect[0][3]))
+    
     def handle_collisions(self):
         
         # Save for later (for enemies, etc.)
@@ -254,6 +280,9 @@ class Game:
 
         # Find the player's neighbouring tiles
         self.find_neighbouring_tiles_to_player()
+        
+        # Find the closest ground tile to the player
+        self.find_closest_ground_tile_to_player()
 
         # Run the player methods
         self.player.run()
