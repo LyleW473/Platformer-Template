@@ -1,4 +1,4 @@
-import pygame
+import pygame, time
 from Global.generic import Generic
 from Global.settings import *
 
@@ -36,13 +36,22 @@ class Player(Generic, pygame.sprite.Sprite):
         self.movement_distance_x = 200 * self.delta_time
         self.move_distance_y = int(150 * self.delta_time)
         """
+
+        self.handle_input = False
+
         # Jumping 
         self.allowed_to_jump = True
         self.allowed_to_double_jump = False
 
-        # Gravity
-        self.gravity = 0 
-        self.gravity_limit = 16 # (16 is the ideal gravity limit as of now)
+        # The desired height of the jump
+        self.desired_jump_height = 96
+        # The desired time for the player to reach that jump height from the ground
+        self.desired_time_to_reach_jump_height = 0.35
+
+        # The constant acceleration is given by the equation: - ( (2s) / (t^2) ), where s is the desired height and t is the desired time to reach the jump height
+        self.suvat_a = - ((2 * self.desired_jump_height) / (self.desired_time_to_reach_jump_height ** 2))
+        # The initial velocity is given by the equation: 2s / t, where s is the desired height and t is the desired time to reach the jump height
+        self.suvat_u = (2 * self.desired_jump_height) / self.desired_time_to_reach_jump_height
 
         # ---------------------------------------------------------------------------------
         # Collisions
@@ -53,8 +62,6 @@ class Player(Generic, pygame.sprite.Sprite):
         self.closest_ground_tile = None # Used to hold the closest ground tile to the player, which will help to determine the strength of gravity
         """
         self.neighbouring_tiles_dict = {} # Used to hold the neighbouring tiles near the player (i.e. within 1 tile of the player, horizontally and vertically)
-
-
 
     def play_animation(self):
         
@@ -81,7 +88,7 @@ class Player(Generic, pygame.sprite.Sprite):
         self.animation_frame_counter = 0
 
         # Draw the player onto the main screen
-        self.draw(surface = self.surface, x = (self.rect.x - self.camera_position[0]), y = (self.rect.y - self.camera_position[1]))
+        #self.draw(surface = self.surface, x = (self.rect.x - self.camera_position[0]), y = (self.rect.y - self.camera_position[1]))
 
     # ---------------------------------------------------------------------------------
     # Movement           
@@ -89,36 +96,43 @@ class Player(Generic, pygame.sprite.Sprite):
     def reset_jump_attributes(self):
 
         # Once the player is back on the ground, the following attributes need to be reset
+        
+        # If the player is 0 tiles away from the ground, then they must be on the ground
+        if self.closest_ground_tile != None and self.rect.colliderect(pygame.Rect(self.closest_ground_tile.rect.x, self.closest_ground_tile.rect.y - 1, self.closest_ground_tile.rect.width, self.closest_ground_tile.rect.height)):
 
-        # Allow the player to jump
-        self.allowed_to_jump = True
+            # Allow the player to jump
+            self.allowed_to_jump = True
 
-        # Don't allow the player to jump
-        self.allowed_to_double_jump = False
+            # Don't allow the player to jump
+            self.allowed_to_double_jump = False
 
-        # Reset gravity
-        self.gravity = 0
-
-        # Reset the limit (This is temporary)
-        self.gravity_limit = 16
+            # The initial speed of the jump should be set back to default
+            self.suvat_u = (2 * self.desired_jump_height) / self.desired_time_to_reach_jump_height
 
     def jump(self):
 
-        # Method used to jump/ double jump
+        # Equation used: s = vt + 1/2(a)(t^2)
+        self.suvat_s = (self.suvat_u * self.delta_time) + (0.5 * self.suvat_a * (self.delta_time ** 2))
+        
+        # Move the player up / down based on the displacement
+        new_position = self.rect.y 
 
-        # Define the jump speeds of the initial and double jump
-        initial_jump_speed= min(int(550 * self.delta_time), 8)
-        double_jump_speed = min(int((750 * self.delta_time)), 11)
+        # If the the displacement is positive, it means we are at the stage in the parabola where we are moving up
+        if self.suvat_s > 0:
+            # Set the new position, based on if there are any collisions or not
+            new_position -= self.handle_tile_collisions(movement_direction = ("y", "up"), movement_speed = abs(self.suvat_s))
 
-        # If it is the first jump
-        if self.allowed_to_jump == False and self.allowed_to_double_jump == True:
-            # Decrease the player's y position by the amount it is allowed to move by (Player moving up)
-            self.rect.y -=  self.handle_tile_collisions(movement_direction = ("y", "up"), movement_speed = initial_jump_speed)
+        # If the displacement is zero or negative, it means we are at the stage in the parabola where we are moving down
+        elif self.suvat_s <= 0:
+            print(abs(self.suvat_s))
+            # Set the new position, based on if there are any collisions or not
+            new_position += self.handle_tile_collisions(movement_direction = ("y", "down"), movement_speed = abs(self.suvat_s))
+        
+        # Set the player's position to the rounded new position (Rounded for accuracy)
+        self.rect.y = round(new_position)
 
-        # If it is the second jump (i.e. the double jump)
-        elif self.allowed_to_jump == False and self.allowed_to_double_jump == False:
-            # Decrease the player's y position by the amount it is allowed to move by (Player moving up)
-            self.rect.y -=  self.handle_tile_collisions(movement_direction = ("y", "up"), movement_speed = double_jump_speed)
+        # Set the new value for v based on the delta time  
+        self.suvat_u += (self.suvat_a * self.delta_time)
 
     def handle_player_movement(self):
         
@@ -126,56 +140,54 @@ class Player(Generic, pygame.sprite.Sprite):
         # Horizontal movement
 
         # The distance the player travels in the x axis with each key press
-        self.move_distance_x =  min(int(300 * self.delta_time), 4)
+
+        pygame.draw.line(self.surface, "white", (self.last_tile_position[0], 0), (self.last_tile_position[0], self.surface.get_height()))
+
+        # Hold the current x position of the player in temporary variables 
+        position_x, position_x_2 = self.rect.x, self.rect.x
+
+        # Acceleration and initial speed are testing values, so may change
+        suvat_a = 2
+        suvat_u = 192
+        # s = ut + 1/2(a)(t)^2
+        suvat_s = (suvat_u * self.delta_time) + (0.5 * suvat_a * (self.delta_time ** 2))
 
         # If the "a" key is pressed and moving left won't place the player off the screen
         if pygame.key.get_pressed()[pygame.K_a] and self.rect.left > 0:
-        
             # Move the player left
-            self.rect.x -= self.handle_tile_collisions(movement_direction = ("x", "left"), movement_speed = self.move_distance_x)
+            position_x -= self.handle_tile_collisions(movement_direction = ("x", "left"), movement_speed = suvat_s)
+            self.rect.x = round(position_x)
 
-        # If the "a" key is pressed and the player isn't at the end of the tile map
+        # If the "d" key is pressed and the player isn't at the end of the tile map
         if pygame.key.get_pressed()[pygame.K_d] and self.rect.right < self.last_tile_position[0]:
-
             # Move the player right
-            self.rect.x += self.handle_tile_collisions(movement_direction = ("x", "right"), movement_speed = self.move_distance_x)
+            position_x_2 += self.handle_tile_collisions(movement_direction = ("x", "right"), movement_speed = suvat_s)
+            self.rect.x = round(position_x_2)
 
         # ---------------------------------------------------------------------------------
         # Vertical movement
-
-        # If the "w" key is pressed and the player is allowed to jump (i.e. the player is on the ground)
-        if pygame.key.get_pressed()[pygame.K_w] and self.allowed_to_jump == True:
-
-            # Don't allow the player to jump
-            self.allowed_to_jump = False
-
-            # Allow the player to double jump
-            self.allowed_to_double_jump = True
-
-        # If the "space" key is pressed and the player has just jumped (initial jump)
-        if pygame.key.get_pressed()[pygame.K_SPACE] and (self.allowed_to_jump == False) and (self.allowed_to_double_jump == True):
-
-            # Don't allow the player to double jump
-            self.allowed_to_double_jump = False
-
-            # Reset gravity strength
-            self.gravity = 0
-            
-            # Set a new gravity limit (this is temporary)
-            self.gravity_limit = 16
-        
+        """ 
+        The following check is used so that when the player presses the input to jump, it will keep moving the player up until they reach the ground again. This is because when the player is on the ground,
+        self.allowed_to_jump is constantly set to True, so the player will never actually jump. The jump method is called once in the event handler in the game states controller to get the player off the ground
+        initially, and then the following code will keep repeating that until the jump is complete.
+        """
         # If the player is in the air and the player has pressed the input to jump
         if self.allowed_to_jump == False:
-            # Start the jump algorithm
+            # Start the jump algorithm 
             self.jump()
     
     def control_gravity_strength(self):
+        # SAVE FOR LATER FOR SOMETHING ELSE 
         # Controls the strength of gravity and checks for collisions with the ground when falling down.
         # Also resets the jump related attributes when the player is on the ground
 
         # Increase the player's y position by the amount it is allowed to move by (Player moving down)
-        self.rect.y += self.handle_tile_collisions(movement_direction = ("y", "down"), movement_speed = self.gravity)
+        position_y = self.rect.y
+        position_y += self.handle_tile_collisions(movement_direction = ("y", "down"), movement_speed = self.gravity)
+        self.rect.y = round(position_y)
 
+        #print(self.initial_y_position, self.rect.bottom)
+        
         # ---------------------------------------------------------------------------------
         # Calculating the distance between the closest ground tile and the player
 
@@ -188,46 +200,6 @@ class Player(Generic, pygame.sprite.Sprite):
         if self.closest_ground_tile != None:
             # Calculate the number of tiles away the player is from the ground
             num_of_tiles_away_from_closest_ground_tile = abs(self.rect.bottom - (self.rect.bottom % TILE_SIZE)- self.closest_ground_tile.rect.top) / (TILE_SIZE)
-
-        # ---------------------------------------------------------------------------------
-        # Setting the gravity limit based on the distance between the closest ground tile and the player
-        match num_of_tiles_away_from_closest_ground_tile:
-            
-            # If the player is on the ground and the gravity limit is less than than 16
-            case 0 if self.gravity < 16:
-                # Set the gravity limit to 16
-                self.gravity_limit = 16
-
-            # If the player is between 3 to 5 tiles away from the ground and the gravity limit is less than 18
-            case _ if 3 <= num_of_tiles_away_from_closest_ground_tile <= 5 and self.gravity < 18:
-                # Set the gravity limit to 18
-                self.gravity_limit = 18
-
-            # If the player is greater than 5 tiles away from the ground and the gravity limit is less than 23
-            case _ if num_of_tiles_away_from_closest_ground_tile > 5 and self.gravity_limit < 23:
-                # Set the gravity limit to 23
-                self.gravity_limit = 23
-
-        # ---------------------------------------------------------------------------------
-        # Applying the gravity
-
-        # If the player is 0 tiles away from the ground, then they must be on the ground
-        if num_of_tiles_away_from_closest_ground_tile == 0: 
-            # Reset all jump related attributes
-            self.reset_jump_attributes()
-        
-        # If the player is floating / in the air
-        else:
-        
-            # If incrementing the gravity is above the gravity limit
-            if self.gravity + max(int(30 * self.delta_time), 1) > self.gravity_limit:
-                # Don't increment gravity
-                self.gravity = self.gravity_limit
-
-            # Otherwise
-            else:
-                # Increase the strength of gravity
-                self.gravity += max(int(30 * self.delta_time), 1)
 
     # ---------------------------------------------------------------------------------
     # Collisions      
@@ -266,7 +238,7 @@ class Player(Generic, pygame.sprite.Sprite):
                                             (self.rect.x - self.camera_position[0]) + self.image.get_width()
                                             ] 
                           
-    def handle_tile_collisions(self, movement_direction, movement_speed = 0):
+    def handle_tile_collisions(self, movement_direction, movement_speed):
         # Calculates the distance that the player should move right before they collide with a tile, so that the player never phases through the tile
 
         # For each world tile that is near the player
@@ -336,8 +308,9 @@ class Player(Generic, pygame.sprite.Sprite):
                 # If the bottom of the player is colliding with the top of the tile
                 if camera_tile_rect.colliderect(self.actual_player_position[0], self.actual_player_position[1] + movement_speed, self.image.get_width(), self.image.get_height()):
 
-                    # If the player is moving down
+                    # # If the player is moving down
                     if movement_direction[1] == "down":
+                        print(self.rect.bottom, self.rect.bottom + (movement_speed - ((self.actual_player_position[2] + movement_speed) - camera_tile_rect.top)), camera_tile_rect.top)
                         # Move the player down as much as we can before they collide with the tile
                         return movement_speed - ((self.actual_player_position[2] + movement_speed) - camera_tile_rect.top)
 
@@ -349,6 +322,7 @@ class Player(Generic, pygame.sprite.Sprite):
                         # Move the player up as much as we can before they collide with the tile
                         return movement_speed - (camera_tile_rect.bottom - (self.actual_player_position[1] - movement_speed))
 
+        #print(movement_direction, movement_speed)
         # If it still hasn't exited the method by now, then the player must not be colliding with anything
         return movement_speed
 
@@ -362,11 +336,11 @@ class Player(Generic, pygame.sprite.Sprite):
         # Play animations
         self.play_animation()
 
-        # Control the gravity strength
-        self.control_gravity_strength()
-
         # Track player movement
         self.handle_player_movement()
+
+        # Reset the jumping attributes if the conditions are met
+        self.reset_jump_attributes()
 
         # # Create / update a mask for pixel - perfect collisions (Uncomment later when adding collisions with objects other than tiles)
         # self.mask = pygame.mask.from_surface(self.image)

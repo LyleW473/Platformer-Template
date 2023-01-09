@@ -6,7 +6,7 @@ from game_states_controller import GameStatesController
 class Main:
     def __init__(self):
 
-        # Pygame set-up
+        # Pygame set-upw
         pygame.init()
 
         # Set the caption
@@ -24,11 +24,15 @@ class Main:
         
         # Create an object to track time
         self.clock = pygame.time.Clock()
-
+        self.chosen_framerate = 60
+        
     def run(self):
 
         while True:
             
+            # Limit FPS to 60
+            self.clock.tick(self.chosen_framerate)
+
             # Calculate delta time 
             delta_time = time.perf_counter() - self.previous_frame
             self.previous_frame = time.perf_counter()
@@ -41,8 +45,6 @@ class Main:
             # Update display
             pygame.display.update() 
             
-            # Limit FPS to 60
-            self.clock.tick(60)
 
 if __name__ == "__main__":
     # Instantiate main and run it

@@ -213,7 +213,7 @@ class Game:
         pygame.draw.line(self.scaled_surface, "pink", ((self.player.rect.right + self.tile_size) * 1 - self.camera_position[0], 0), ((self.player.rect.right + self.tile_size) * 1 - self.camera_position[0], screen_height))
 
 
-        pygame.draw.rect(self.scaled_surface, "purple", (self.player.rect.x - self.camera_position[0], self.player.rect.y - self.camera_position[1], self.player.image.get_width(), self.player.image.get_height()), 0)
+        pygame.draw.rect(self.scaled_surface, "purple", (self.player.rect.x - self.camera_position[0], self.player.rect.y - self.camera_position[1], self.player.rect.width, self.player.rect.height), 0)
         
         # For each world tile in the world tiles
         for world_tile, world_tile_number in self.world_tiles_dict.items():

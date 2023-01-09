@@ -95,6 +95,9 @@ class GameStatesController():
 
                 # Key presses
                 case pygame.KEYDOWN:
+
+                    # ------------------------------------------------------------
+                    # Universal events
                     
                     # Find which key was pressed
                     match event.key:
@@ -116,17 +119,48 @@ class GameStatesController():
                                 pygame.display.set_mode(flags = pygame.FULLSCREEN, depth = 32)
                                 self.full_screen = True
 
-                        # "Esc" key
-                        case pygame.K_ESCAPE:
+                    # ------------------------------------------------------------
+                    # In-game / Level events
 
-                            # -----------------
-                            # In-game
-                
-                            if self.game.running == True:
+                    if self.game.running == True:
+                        
+                        # Find which key was pressed
+                        match event.key:
+
+                            # "Esc" key
+                            case pygame.K_ESCAPE:
+                    
                                 # Show the paused menu
                                 self.game.running = False
                                 self.menu.show_paused_menu = True
-            
+
+                            # "w" key
+                            case pygame.K_w:
+                                
+                                # If the player is allowed to jump (i.e. pressed the "w" key when on the ground )
+                                if self.game.player.allowed_to_jump == True:
+
+                                    # Don't allow the player to jump
+                                    self.game.player.allowed_to_jump = False
+
+                                    # Allow the player to double jump
+                                    self.game.player.allowed_to_double_jump = True
+                                    
+                                    # Make the player jump
+                                    self.game.player.jump()
+
+                            # "Space" key
+                            case pygame.K_SPACE:
+                                    
+                                # If the player has already jumped (i.e. has pressed the "space" key during the initial jump)
+                                if self.game.player.allowed_to_jump == False and self.game.player.allowed_to_double_jump == True:
+
+                                    # Don't allow the player to double jump
+                                    self.game.player.allowed_to_double_jump = False
+                                    
+                                    # Make the player double jump
+                                    self.game.player.jump()
+
     def run(self, delta_time):
         
         # Run the event loop
@@ -141,7 +175,7 @@ class GameStatesController():
                 self.game.running = True
 
             # Load the level (Has conditions which will only perform this if the level hasn't been loaded into the game yet)
-            self.load_level(chosen_level_number = 2)
+            self.load_level(chosen_level_number = 3)
 
             # Run the game
             self.game.run(delta_time)
