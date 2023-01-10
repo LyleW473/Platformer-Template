@@ -145,7 +145,7 @@ class GameStatesController():
 
                                     # Allow the player to double jump
                                     self.game.player.allowed_to_double_jump = True
-                                    
+
                                     # Make the player jump
                                     self.game.player.jump()
 
@@ -160,7 +160,12 @@ class GameStatesController():
                                     
                                     # Make the player double jump
                                     self.game.player.jump()
+                                    
+                                    # Set the acceleration of the double jump 
+                                    self.game.player.suvat_a = - ((2 * self.game.player.desired_double_jump_height) / (self.game.player.desired_time_to_reach_double_jump_height ** 2))
 
+                                    # Set the initial velocity of the double jump
+                                    self.game.player.suvat_u = (2 * self.game.player.desired_double_jump_height) / self.game.player.desired_time_to_reach_double_jump_height
     def run(self, delta_time):
         
         # Run the event loop
@@ -175,7 +180,7 @@ class GameStatesController():
                 self.game.running = True
 
             # Load the level (Has conditions which will only perform this if the level hasn't been loaded into the game yet)
-            self.load_level(chosen_level_number = 3)
+            self.load_level(chosen_level_number = 2)
 
             # Run the game
             self.game.run(delta_time)

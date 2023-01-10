@@ -27,7 +27,7 @@ class Main:
         self.chosen_framerate = 60
         
     def run(self):
-
+ 
         while True:
             
             # Limit FPS to 60

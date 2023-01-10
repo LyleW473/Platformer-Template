@@ -43,10 +43,13 @@ class Player(Generic, pygame.sprite.Sprite):
         self.allowed_to_jump = True
         self.allowed_to_double_jump = False
 
-        # The desired height of the jump
-        self.desired_jump_height = 96
-        # The desired time for the player to reach that jump height from the ground
-        self.desired_time_to_reach_jump_height = 0.35
+        # The desired height of the initial jump
+        self.desired_jump_height = TILE_SIZE * 2 # 64
+        self.desired_double_jump_height = (TILE_SIZE * 2) + (TILE_SIZE / 2) # 80
+
+        # The desired time for the player to reach that jump height from the ground (in seconds)
+        self.desired_time_to_reach_jump_height = 0.28
+        self.desired_time_to_reach_double_jump_height = 0.3
 
         # The constant acceleration is given by the equation: - ( (2s) / (t^2) ), where s is the desired height and t is the desired time to reach the jump height
         self.suvat_a = - ((2 * self.desired_jump_height) / (self.desired_time_to_reach_jump_height ** 2))
@@ -56,7 +59,6 @@ class Player(Generic, pygame.sprite.Sprite):
         # ---------------------------------------------------------------------------------
         # Collisions
         """
-        self.actual_player_position = None : Actual position of the player when the camera position is subtracted from the player rect's position
         self.camera_position = None # Position of the camera. This is updated inside "Game"d
         self.last_tile_position = None # Position of the last tile that the player can be on. This will be updated by "Game" when the level is created
         self.closest_ground_tile = None # Used to hold the closest ground tile to the player, which will help to determine the strength of gravity
@@ -109,6 +111,9 @@ class Player(Generic, pygame.sprite.Sprite):
             # The initial speed of the jump should be set back to default
             self.suvat_u = (2 * self.desired_jump_height) / self.desired_time_to_reach_jump_height
 
+            # Acceleration needs to be reset (In case that the player also double jumped)
+            self.suvat_a = - ((2 * self.desired_jump_height) / (self.desired_time_to_reach_jump_height ** 2))
+
     def jump(self):
 
         # Equation used: s = vt + 1/2(a)(t^2)
@@ -120,17 +125,50 @@ class Player(Generic, pygame.sprite.Sprite):
         # If the the displacement is positive, it means we are at the stage in the parabola where we are moving up
         if self.suvat_s > 0:
             # Set the new position, based on if there are any collisions or not
-            new_position -= self.handle_tile_collisions(movement_direction = ("y", "up"), movement_speed = abs(self.suvat_s))
+            new_position -= self.handle_tile_collisions(movement_direction = ("y", "up"), movement_speed = self.suvat_s)
 
         # If the displacement is zero or negative, it means we are at the stage in the parabola where we are moving down
         elif self.suvat_s <= 0:
-            print(abs(self.suvat_s))
             # Set the new position, based on if there are any collisions or not
-            new_position += self.handle_tile_collisions(movement_direction = ("y", "down"), movement_speed = abs(self.suvat_s))
-        
-        # Set the player's position to the rounded new position (Rounded for accuracy)
-        self.rect.y = round(new_position)
+            new_position -= self.handle_tile_collisions(movement_direction = ("y", "down"), movement_speed = self.suvat_s)
 
+        
+        """ Set the player's position based on whether "new position + self.rect.height" (which is the bottom of the player rect) is greater than the closest ground tile.
+        - The int is so that if the position of the bottom of the player was 320.72829995... and the top of the tile was 320, the position should be truncated.
+        - The round is so that if the position of the bottom of the player was 319.92381232... and the top of the tile was 320, the position should be rounded up.
+        """
+        
+        # If we are at the stage in the jump where the player is moving up
+        if self.suvat_s > 0:
+            # Set the player's y position as the rounded new position
+            self.rect.y = round(new_position)
+
+        # If we are at the stage in the jump where the player is moving down
+        elif self.suvat_s <= 0:
+            
+            # If there is not closest ground tile
+            if self.closest_ground_tile == None:
+                # Set the player's position as the new position (Normal falling)
+                self.rect.y = round(new_position)
+
+            # If the bottom of the player is greater than the top of the closest ground tile
+            elif (new_position + self.rect.height) > self.closest_ground_tile.rect.top:
+
+                # At low frame rates, as a last case scenario, do another check to see if the bottom of the player would still be greater than top of the closest ground tile
+                if int(new_position + self.rect.height) > self.closest_ground_tile.rect.top:
+                    # If it is, set the player's bottom to be at the top of the closest ground tile
+                    self.rect.bottom = self.closest_ground_tile.rect.top
+                
+                # Otherwise
+                else:
+                    # Truncate the new position, so the player won't be overlapping the closest ground tile
+                    self.rect.y = int(new_position)
+
+            # If the bottom of the player is less than or equal to the top of the tile
+            elif (new_position + self.rect.height) <= self.closest_ground_tile.rect.top:
+                # Set the position of the player as the rounded value (rounds up), so the player won't be overlapping the closest ground tile
+                self.rect.y = round(new_position)
+        
         # Set the new value for v based on the delta time  
         self.suvat_u += (self.suvat_a * self.delta_time)
 
@@ -153,16 +191,30 @@ class Player(Generic, pygame.sprite.Sprite):
         suvat_s = (suvat_u * self.delta_time) + (0.5 * suvat_a * (self.delta_time ** 2))
 
         # If the "a" key is pressed and moving left won't place the player off the screen
-        if pygame.key.get_pressed()[pygame.K_a] and self.rect.left > 0:
-            # Move the player left
-            position_x -= self.handle_tile_collisions(movement_direction = ("x", "left"), movement_speed = suvat_s)
-            self.rect.x = round(position_x)
+        if pygame.key.get_pressed()[pygame.K_a]: #and self.rect.left > 0:
+            
+            # If moving left will place the player out of the screen
+            if self.rect.left - suvat_s <= 0:
+                # Set the player's x position to be at 0
+                self.rect.left = 0
+            # Otherwise
+            elif self.rect.left - suvat_s > 0:
+                # Move the player left
+                position_x += self.handle_tile_collisions(movement_direction = ("x", "left"), movement_speed = - suvat_s)
+                self.rect.x = round(position_x)
 
         # If the "d" key is pressed and the player isn't at the end of the tile map
-        if pygame.key.get_pressed()[pygame.K_d] and self.rect.right < self.last_tile_position[0]:
-            # Move the player right
-            position_x_2 += self.handle_tile_collisions(movement_direction = ("x", "right"), movement_speed = suvat_s)
-            self.rect.x = round(position_x_2)
+        if pygame.key.get_pressed()[pygame.K_d]: #and self.rect.right < self.last_tile_position[0]:
+            
+            # If moving right will place the player out of the tile map / out of the screen
+            if self.rect.right + suvat_s >= self.last_tile_position[0]:
+                # Set the player's right position to be at the last tile position in the tile map
+                self.rect.right = self.last_tile_position[0]
+            # Otherwise
+            else:
+                # Move the player right
+                position_x_2 += self.handle_tile_collisions(movement_direction = ("x", "right"), movement_speed = suvat_s)
+                self.rect.x = round(position_x_2)
 
         # ---------------------------------------------------------------------------------
         # Vertical movement
@@ -203,134 +255,49 @@ class Player(Generic, pygame.sprite.Sprite):
 
     # ---------------------------------------------------------------------------------
     # Collisions      
-
-    def find_actual_player_position(self):
-
-        # Used to find the actual position of the player according to where they are on-screen.
-
-        """ 
-        Create a list containing the positions of the actual rectangle of the player according to how its seen on screen. The items are: x, y, top, bottom, left, right:
-
-        - x = Found by subtracting how far the camera has traveled from the the player's rect x position
-        - y = Found by subtracting how far the camera has traveled from the player's rect y position
-        - Top = Same as y
-        - Bottom = Top + the height of the player image
-        - Left = Same as x 
-        - Right = Left + the width of the player image
-        
-        self.actual_player_position = [
-                                            self.rect.x - (self.camera_position[0]),
-                                            self.rect.y - (self.camera_position[1]), 
-                                            self.rect.y - (self.camera_position[1]),
-                                            self.rect.y - (self.camera_position[1]) + self.image.get_height(),
-                                            self.rect.x - (self.camera_position[0]),
-                                            (self.rect.x - (self.camera_position[0])) + self.image.get_width()
-                                            
-                                            ]      
-
-        The list above is the same as the list below:
-        """ 
-        # (x and left), (y and top), bottom, right
-        self.actual_player_position = [
-                                            self.rect.x - self.camera_position[0],
-                                            self.rect.y - self.camera_position[1], 
-                                            (self.rect.y - self.camera_position[1]) + self.image.get_height(),
-                                            (self.rect.x - self.camera_position[0]) + self.image.get_width()
-                                            ] 
                           
     def handle_tile_collisions(self, movement_direction, movement_speed):
         # Calculates the distance that the player should move right before they collide with a tile, so that the player never phases through the tile
 
-        # For each world tile that is near the player
-        for tile_number, tile in self.neighbouring_tiles_dict.items():
+        # self.rect.y - movement_speed because going up = subtracting, going down = adding
+        y_collisions = pygame.Rect(self.rect.x, self.rect.y - movement_speed, self.rect.width, self.rect.height).collidedict(self.neighbouring_tiles_dict)
+        x_collisions = pygame.Rect(self.rect.x + movement_speed, self.rect.y, self.rect.width, self.rect.height).collidedict(self.neighbouring_tiles_dict)
+
+
+        # If there is a y collision
+        if y_collisions != None and movement_direction[0] == "y":
+            pygame.draw.rect(self.surface, "green", (y_collisions[0].rect.x - self.camera_position[0], y_collisions[0].rect.y - self.camera_position[1], y_collisions[0].rect.width, y_collisions[0].rect.height))
             
-            # Create a new tile rect, which is a rectangle which holds the rectangle positions of the tile as it is being seen on screen
-            camera_tile_rect = pygame.Rect(tile.rect.x - self.camera_position[0], tile.rect.y - self.camera_position[1], TILE_SIZE, TILE_SIZE)
+            # If the player is moving down
+            if movement_speed < 0:
+                # Return the negative value of how much the player should move. 
+                # Note: This is because self.rect.y - (- dy) is the same as self.rect.y + dy
+                return - (movement_speed - ((self.rect.bottom + movement_speed) - y_collisions[0].rect.top))
+            
+            # If the player is moving up
+            elif movement_speed > 0:
+                # Move the player as much as we can before overlapping with the tile
+                return movement_speed - (y_collisions[0].rect.bottom - (self.rect.y - movement_speed))
 
-            # If the player is trying to move along the x axis
-            if movement_direction[0] == "x":
+        # If there is a horizontal collision
+        elif x_collisions != None and movement_direction[0] == "x":
+            pygame.draw.rect(self.surface, "green", (x_collisions[0].rect.x - self.camera_position[0], x_collisions[0].rect.y - self.camera_position[1], x_collisions[0].rect.width, x_collisions[0].rect.height))
+            
+            # If the player is moving left
+            if movement_speed < 0:
+                # Move the player as much as we can before overlapping with the tile
+                return movement_speed + (x_collisions[0].rect.right - (self.rect.left + movement_speed))
 
-                # Left side of the player colliding with the right side of the tile
-                if camera_tile_rect.colliderect(self.actual_player_position[0] - movement_speed, self.actual_player_position[1], self.image.get_width(), self.image.get_height()):
-                    
-                    # Testing highlight
-                    pygame.draw.rect(self.surface, "yellow", camera_tile_rect, 0)
-                    
-                    # If the player is trying to move left
-                    if movement_direction[1] == "left":
-                        # Move the player as much to the left as much as we can before they collide with the tiled
-                        return movement_speed - (camera_tile_rect.right - (self.actual_player_position[0] - movement_speed))
+            # If the player is moving right
+            if movement_speed > 0:
+                # Move the player as much as we can before overlapping with the tile
+                return movement_speed - ((self.rect.right + movement_speed) - x_collisions[0].rect.left)
 
-                    # If the player is trying to move right
-                    if movement_direction[1] == "right":
-
-                        # If the tile to the right of the player is in the neighbouring tiles dictionary
-                        if tile_number + 1 in self.neighbouring_tiles_dict.keys():
-                            
-                            # Create a new rect for that adjacent tile
-                            adjacent_tile_rect_to_player = pygame.Rect(self.neighbouring_tiles_dict[tile_number + 1].rect.x - self.camera_position[0], self.neighbouring_tiles_dict[tile_number + 1].rect.y - self.camera_position[1], TILE_SIZE, TILE_SIZE)
-
-                            # If there is a collision between the player and the tile to the right of the player
-                            if adjacent_tile_rect_to_player.colliderect((self.actual_player_position[0] + movement_speed ), self.actual_player_position[1], self.image.get_width(), self.image.get_height()):
-                                # Return 0, i.e. don't let the player move
-                                return 0
-
-                            # Note: If there is no collision, then movement speed is returned (at the end of the method)
-
-                # Right side of the player colliding with the left side of the tile
-                if camera_tile_rect.colliderect(self.actual_player_position[0] + movement_speed, self.actual_player_position[1], self.image.get_width(), self.image.get_height()):       
-                    pygame.draw.rect(self.surface, "yellow", camera_tile_rect, 0)
-                    
-                    # If the player is trying to move left
-                    if movement_direction[1] == "left":
-                        
-                        # If the tile to the left of the player is in the neighbouring tiles dictionary
-                        if (tile_number - 1) in self.neighbouring_tiles_dict.keys():
-                            
-                            # Create a new rect for that adjacent tile
-                            adjacent_tile_rect_to_player = pygame.Rect(self.neighbouring_tiles_dict[tile_number - 1].rect.x - self.camera_position[0], self.neighbouring_tiles_dict[tile_number - 1].rect.y - self.camera_position[1], TILE_SIZE, TILE_SIZE)
-
-                            # If there is a collision between the player and the tile to the left of the player
-                            if adjacent_tile_rect_to_player.colliderect((self.actual_player_position[0] - movement_speed ), self.actual_player_position[1], self.image.get_width(), self.image.get_height()):
-                                # Return 0, i.e. don't let the player move
-                                return 0
-
-                            # Note: If there is no collision, then movement speed is returned (at the end of the method)
-
-                    # If the player is trying to move right
-                    if movement_direction[1] == "right":
-                        # Move the player to the right as much as we can before they collide with the tile
-                        return movement_speed - ((self.actual_player_position[3] + movement_speed) - camera_tile_rect.left)
-
-            # If the player is trying to move along the y - axis
-            if movement_direction[0] == "y":
-                
-                # If the bottom of the player is colliding with the top of the tile
-                if camera_tile_rect.colliderect(self.actual_player_position[0], self.actual_player_position[1] + movement_speed, self.image.get_width(), self.image.get_height()):
-
-                    # # If the player is moving down
-                    if movement_direction[1] == "down":
-                        print(self.rect.bottom, self.rect.bottom + (movement_speed - ((self.actual_player_position[2] + movement_speed) - camera_tile_rect.top)), camera_tile_rect.top)
-                        # Move the player down as much as we can before they collide with the tile
-                        return movement_speed - ((self.actual_player_position[2] + movement_speed) - camera_tile_rect.top)
-
-                # If the bottom of the player is colliding with the bottom of the tile
-                elif camera_tile_rect.colliderect(self.actual_player_position[0], self.actual_player_position[1] - movement_speed, self.image.get_width(), self.image.get_height()):
-
-                    # If the player is trying to move up
-                    if movement_direction[1] == "up":
-                        # Move the player up as much as we can before they collide with the tile
-                        return movement_speed - (camera_tile_rect.bottom - (self.actual_player_position[1] - movement_speed))
-
-        #print(movement_direction, movement_speed)
-        # If it still hasn't exited the method by now, then the player must not be colliding with anything
+        # If there are no collisions, then move the player by movement_speed
         return movement_speed
 
     def run(self):
         
-        # Find / Update the actual player position for accurate collisions
-        self.find_actual_player_position()
-
         pygame.draw.line(self.surface, "white", (self.surface.get_width() / 2, 0), (self.surface.get_width() / 2, self.surface.get_height()))
 
         # Play animations

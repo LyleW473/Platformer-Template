@@ -222,14 +222,14 @@ class Game:
             if (self.player.rect.left  - (self.tile_size) <= world_tile.rect.centerx <= self.player.rect.right + (self.tile_size)) and (self.player.rect.top - (self.tile_size * 1) <= world_tile.rect.centery <= (self.player.rect.bottom + self.tile_size * 1)):
 
                 # Add it to the player's neighbouring tiles dictionary
-                self.player.neighbouring_tiles_dict[world_tile_number] = world_tile
+                self.player.neighbouring_tiles_dict[world_tile] = world_tile_number
 
             # If the world tile is not within 1 tiles of the player (horizontally and vertically)
             else:
                 # If the world tile is inside the neighbouring tiles dict's values
-                if world_tile in self.player.neighbouring_tiles_dict.values():
+                if world_tile_number in self.player.neighbouring_tiles_dict.values():
                     # Remove the world tile from the neighbouring tiles dictionary
-                    self.player.neighbouring_tiles_dict.pop(world_tile_number)
+                    self.player.neighbouring_tiles_dict.pop(world_tile)
 
     def find_closest_ground_tile_to_player(self):
 
