@@ -39,7 +39,9 @@ class Player(Generic, pygame.sprite.Sprite):
 
         self.handle_input = False
 
+        # ---------------------------------------
         # Jumping 
+        
         self.allowed_to_jump = True
         self.allowed_to_double_jump = False
 
@@ -56,9 +58,17 @@ class Player(Generic, pygame.sprite.Sprite):
         # The initial velocity is given by the equation: 2s / t, where s is the desired height and t is the desired time to reach the jump height
         self.jumping_suvat_u = (2 * self.desired_jump_height) / self.desired_time_to_reach_jump_height
 
+        # ---------------------------------------
+        # Dynamic jumping
+        self.jump_power = 0
 
+        # The chosen jump power indicator version that the player selected in the settings (YET TO IMP<EMENT)
+        self.chosen_jump_power_indicator_version = "Special-Middle"
+
+        # ---------------------------------------
         # Falling
         self.falling = False
+
         # The desired height of the fall
         self.desired_fall_height = 80
         # The desired time for the player to reach that fall height from the ground (in seconds)
@@ -193,6 +203,108 @@ class Player(Generic, pygame.sprite.Sprite):
         # Set the new value for v based on the delta time  
         self.jumping_suvat_u += (self.jumping_suvat_a * self.delta_time)
 
+    def draw_jump_power_indicator(self):
+        """
+        - The jump power indicator will only show a height that is (5 * TILE_SIZE) tall, but the amount that the player actually jumps is 5.5 tiles high.
+            - This is so that the player has some room for error when trying to reach areas higher than 5 tiles from their current position
+        
+
+
+        # The maximum height of the jump power indicator will be (5 * TILE_SIZE)
+        # 4 Versions: 
+
+        # ---------------------------------------
+        - One that draws from the top of the player's rect
+
+        # The maximum height of the jump power indicator will be (5 * TILE_SIZE)
+        # Note: The "+ 1" is because the player's desired jump height is 64, and thats starting from the bottom of the player.
+        jump_power_indicator_y = max(self.rect.top - round(self.jump_power), self.rect.top - (3 * TILE_SIZE))
+        jump_power_indicator_height = min(round(self.jump_power), 3 * TILE_SIZE)
+
+        # Draw the jump power indicator
+        pygame.draw.rect(self.surface, "white", (self.rect.left - 20 , jump_power_indicator_y - TILE_SIZE, 10, TILE_SIZE + jump_power_indicator_height), 0)
+        pygame.draw.rect(self.surface, "black", (self.rect.left - 20 , jump_power_indicator_y - TILE_SIZE, 10, TILE_SIZE + jump_power_indicator_height), 2)
+
+        # ---------------------------------------
+        - One that draws from midpoint of the player's rect
+
+        # The maximum height of the jump power indicator will be (5 * TILE_SIZE)
+        jump_power_indicator_y = max(self.rect.top - round(self.jump_power), self.rect.top - (3.5 * TILE_SIZE))
+        jump_power_indicator_height = min(round(self.jump_power), 3.5 * TILE_SIZE)
+
+        # Draw the jump power indicator
+        pygame.draw.rect(self.surface, "white", (self.rect.left - 20 , jump_power_indicator_y - (0.5 * TILE_SIZE), 10, TILE_SIZE + jump_power_indicator_height), 0)
+        pygame.draw.rect(self.surface, "black", (self.rect.left - 20 , jump_power_indicator_y - (0.5 * TILE_SIZE), 10, TILE_SIZE + jump_power_indicator_height), 2)
+        
+        # ---------------------------------------
+        - One that draws from the bottom of the player:
+
+        # The maximum height of the jump power indicator will be (5 * TILE_SIZE)
+        jump_power_indicator_y = max(self.rect.bottom - (self.desired_jump_height + round(self.jump_power)), self.rect.bottom - (5 * TILE_SIZE))
+        jump_power_indicator_height = min(self.desired_jump_height + round(self.jump_power), 5 * TILE_SIZE)
+
+        # Draw the jump power indicator
+        pygame.draw.rect(self.surface, "white", (self.rect.left - 20 , jump_power_indicator_y, 10, jump_power_indicator_height), 0)
+        pygame.draw.rect(self.surface, "black", (self.rect.left - 20 , jump_power_indicator_y, 10, jump_power_indicator_height), 2)
+
+        # ---------------------------------------
+        - One that draws from the bottom of the player but has a static indicator bar already spawned
+
+        # The maximum height of the jump power indicator will be (5 * TILE_SIZE)
+        jump_power_indicator_y = max(self.rect.top - round(self.jump_power), self.rect.top - (3.5 * TILE_SIZE))
+        jump_power_indicator_height = min(round(self.jump_power), 3.5 * TILE_SIZE)
+
+        # Draw the jump power indicator
+        pygame.draw.rect(self.surface, "black", ((self.rect.left - 20), (self.rect.top + (0.5 * TILE_SIZE)) - (4.5 * TILE_SIZE), 10, 4.5 * TILE_SIZE), 0)
+        pygame.draw.rect(self.surface, "white", (self.rect.left - 20 , jump_power_indicator_y - (0.5 * TILE_SIZE), 10, TILE_SIZE + jump_power_indicator_height), 0)
+        pygame.draw.rect(self.surface, "black", (self.rect.left - 20 , jump_power_indicator_y - (0.5 * TILE_SIZE), 10, TILE_SIZE + jump_power_indicator_height), 2)
+
+        """ 
+        # Dictionary possibly for players to change between jump power indicator versions inside the menus
+        # Values are: jump_power_indicator_y, jump_power_indicator_height, Draw rect y position, Draw rect height
+        # Create / Update the dictionary for the jump power indicator versions
+        self.jump_power_indicator_versions_dict = {
+            "Top": [
+            max(self.rect.top - round(self.jump_power), self.rect.top - (3 * TILE_SIZE)),
+            min(round(self.jump_power), 3 * TILE_SIZE),
+            max(self.rect.top - round(self.jump_power), self.rect.top - (3 * TILE_SIZE)) - TILE_SIZE,
+            TILE_SIZE + min(round(self.jump_power), 3 * TILE_SIZE)
+            ],
+
+            "Middle": [
+            max(self.rect.top - round(self.jump_power), self.rect.top - (3.5 * TILE_SIZE)),
+            min(round(self.jump_power), 3.5 * TILE_SIZE),
+            max(self.rect.top - round(self.jump_power), self.rect.top - (3.5 * TILE_SIZE)) - (0.5 * TILE_SIZE),
+            TILE_SIZE + min(round(self.jump_power), 3.5 * TILE_SIZE)
+
+            ],
+
+            "Bottom": [
+            max(self.rect.bottom - (self.desired_jump_height + round(self.jump_power)), self.rect.bottom - (5 * TILE_SIZE)),
+            min(self.desired_jump_height + round(self.jump_power), 5 * TILE_SIZE),
+            max(self.rect.bottom - (self.desired_jump_height + round(self.jump_power)), self.rect.bottom - (5 * TILE_SIZE)), 
+            min(self.desired_jump_height + round(self.jump_power), 5 * TILE_SIZE),
+            ],
+            "Special-Middle": [
+            max(self.rect.top - round(self.jump_power), self.rect.top - (3.5 * TILE_SIZE)), 
+            min(round(self.jump_power), 3.5 * TILE_SIZE),
+            max(self.rect.top - round(self.jump_power), self.rect.top - (3.5 * TILE_SIZE)) - (0.5 * TILE_SIZE),
+            TILE_SIZE + min(round(self.jump_power), 3.5 * TILE_SIZE),
+            (self.rect.top + (0.5 * TILE_SIZE)) - (4.5 * TILE_SIZE), 
+            4.5 * TILE_SIZE 
+            ]
+            }
+
+        # Draw the jump power indicator
+
+        # The static bar only for the "Special-Middle" version
+        if self.chosen_jump_power_indicator_version == "Special-Middle":
+            pygame.draw.rect(self.surface, "black", ((self.rect.left - 20), self.jump_power_indicator_versions_dict[self.chosen_jump_power_indicator_version][4], 10, self.jump_power_indicator_versions_dict[self.chosen_jump_power_indicator_version][5]), 0)
+
+        # The jump power indicator for all versions
+        pygame.draw.rect(self.surface, "white", (self.rect.left - 20 , self.jump_power_indicator_versions_dict[self.chosen_jump_power_indicator_version][2], 10, self.jump_power_indicator_versions_dict[self.chosen_jump_power_indicator_version][3]), 0)
+        pygame.draw.rect(self.surface, "black", (self.rect.left - 20 , self.jump_power_indicator_versions_dict[self.chosen_jump_power_indicator_version][2], 10, self.jump_power_indicator_versions_dict[self.chosen_jump_power_indicator_version][3]), 2)
+
     def fall(self):
 
         # The method used to move the player when falling
@@ -264,7 +376,7 @@ class Player(Generic, pygame.sprite.Sprite):
                 self.rect.x = round(position_x)
 
         # If the "d" key is pressed and the player isn't at the end of the tile map
-        if pygame.key.get_pressed()[pygame.K_d]: #and self.rect.right < self.last_tile_position[0]:
+        if pygame.key.get_pressed()[pygame.K_d]:
             
             # If moving right will place the player out of the tile map / out of the screen
             if self.rect.right + suvat_s >= self.last_tile_position[0]:
@@ -281,6 +393,57 @@ class Player(Generic, pygame.sprite.Sprite):
         
         # ---------------------------------------
         # Jumping
+        # Note: Normal jumping is within the gamestates controller (This is so the player doesn't hold down the "w" key, which will cause the player to keep jumping)
+        pygame.draw.line(self.surface, "white", (0, self.rect.bottom - ( 5 * TILE_SIZE)), (self.surface.get_width(), self.rect.bottom - ( 5 * TILE_SIZE)), 1)
+        pygame.draw.line(self.surface, "white", (0, self.rect.bottom - ( 5.5 * TILE_SIZE)), (self.surface.get_width(), self.rect.bottom - ( 5.5 * TILE_SIZE)), 1)
+
+        # ---------------------------------------
+        # Dynamic jumping
+        # If the player is on the ground at the moment, and has pressed the spacebar key
+        if self.allowed_to_jump == True and self.allowed_to_double_jump == False:
+            
+            # If the player is holding the spacebar button
+            if pygame.key.get_pressed()[pygame.K_SPACE]:
+                
+                # Draw the jump power indicator
+                self.draw_jump_power_indicator()
+
+                # If the current height generated is less than the maximum height the player can jump (5.5 x 32 pixels high)
+                if (self.desired_jump_height + self.jump_power <= (5.5  * TILE_SIZE)):
+                    # Keep increasing the jump power
+                    self.jump_power += 60 * self.delta_time # Add 60 per second
+
+            # If the player has released the spacebar button
+            if (pygame.key.get_pressed()[pygame.K_SPACE] == False and self.jump_power > 0):
+
+                print(self.desired_jump_height + self.jump_power, self.jump_power)
+
+                # Set the new desired jump height (Which is the normal jump with the jump power added on top)
+                new_desired_jump_height = self.desired_jump_height + round(self.jump_power)
+
+                # Set the new time (YET TO IMPLEMENT)
+                new_desired_time = self.desired_time_to_reach_jump_height
+
+                # Set the new acceleration with a new height 
+                self.jumping_suvat_a = - ((2 * (new_desired_jump_height))) / (self.desired_time_to_reach_jump_height ** 2)
+
+                # Set the new initial speed with a new height
+                self.jumping_suvat_u = (2 * (new_desired_jump_height)) / self.desired_time_to_reach_jump_height
+
+                # Don't allow the player to jump (initial jump)
+                self.allowed_to_jump = False
+                
+                # Allow the player to double jump
+                self.allowed_to_double_jump = True
+
+                # Reset the jump power
+                self.jump_power = 0
+
+                # Make the player jump
+                self.jump()
+                
+                print("released")
+
         """ 
         The following check is used so that when the player presses the input to jump, it will keep moving the player up until they reach the ground again. This is because when the player is on the ground,
         self.allowed_to_jump is constantly set to True, so the player will never actually jump. The jump method is called once in the event handler in the game states controller to get the player off the ground
@@ -385,7 +548,7 @@ class Player(Generic, pygame.sprite.Sprite):
         return movement_speed
 
     def run(self):
-        
+        #print("jump power", self.jump_power)
         pygame.draw.line(self.surface, "white", (self.surface.get_width() / 2, 0), (self.surface.get_width() / 2, self.surface.get_height()))
 
         # Play animations

@@ -24,7 +24,7 @@ class Main:
         
         # Create an object to track time
         self.clock = pygame.time.Clock()
-        self.chosen_framerate = 30
+        self.chosen_framerate = 60
         
     def run(self):
  
