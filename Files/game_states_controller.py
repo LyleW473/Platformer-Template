@@ -158,14 +158,15 @@ class GameStatesController():
                                     # Don't allow the player to double jump
                                     self.game.player.allowed_to_double_jump = False
                                     
+                                    # Set the acceleration of the double jump 
+                                    self.game.player.jumping_suvat_a = - ((2 * self.game.player.desired_double_jump_height) / (self.game.player.desired_time_to_reach_double_jump_height ** 2))
+
+                                    # Set the initial velocity of the double jump
+                                    self.game.player.jumping_suvat_u = (2 * self.game.player.desired_double_jump_height) / self.game.player.desired_time_to_reach_double_jump_height
+
                                     # Make the player double jump
                                     self.game.player.jump()
                                     
-                                    # Set the acceleration of the double jump 
-                                    self.game.player.suvat_a = - ((2 * self.game.player.desired_double_jump_height) / (self.game.player.desired_time_to_reach_double_jump_height ** 2))
-
-                                    # Set the initial velocity of the double jump
-                                    self.game.player.suvat_u = (2 * self.game.player.desired_double_jump_height) / self.game.player.desired_time_to_reach_double_jump_height
     def run(self, delta_time):
         
         # Run the event loop
