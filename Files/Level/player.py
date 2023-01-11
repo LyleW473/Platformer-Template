@@ -40,6 +40,39 @@ class Player(Generic, pygame.sprite.Sprite):
         self.facing_right = True
 
         # ---------------------------------------
+        # Horizontal movement
+
+        # Set the initial horizontal velocity to be 0
+        self.horizontal_suvat_u = 0
+
+        # Calculate the velocity that the player moves at given a distance that the player travels within a given time span
+
+        # After re-arranging s = ut + 1/2(a)(t^2), v is given by the equation: (2s - a(t)^2) / 2t, where a is 0 because acceleration is constant
+        time_to_travel_distance_at_final_horizontal_velocity = 0.5 # t
+        distance_travelled_at_final_horizontal_velocity = 96 # s
+        # Full version: self.horizontal_suvat_v = ((2 * distance_travelled_at_final_horizontal_velocity) - (0 * (time_to_travel_distance_at_final_horizontal_velocity ** 2)) / (2 * time_to_travel_distance_at_final_horizontal_velocity))
+        # Simplified version:
+        self.horizontal_suvat_v = ((2 * distance_travelled_at_final_horizontal_velocity) / (2 * time_to_travel_distance_at_final_horizontal_velocity))
+
+        # Calculate the acceleration needed for the player to reach self.horizontal_suvat_v within a given time span
+
+        # After re-arranging v = u + at, a is given by the equation: (v - u) / t, where u is 0
+        time_to_reach_final_horizontal_velocity = 0.12
+        # Full version: self.horizontal_suvat_a = (self.horizontal_suvat_v - 0) / time_to_reach_final_horizontal_velocity
+        # Simplified version:
+        self.horizontal_suvat_a = self.horizontal_suvat_v / time_to_reach_final_horizontal_velocity
+
+        # Deceleration
+        self.decelerating = False
+        # Calculate the deceleration required for the player to decelerate from the final horizontal velocity to 0 (Store as absolute value)
+
+        # After re-arranging v = u + at, a is given by the equation: (v - u) / t, where v is 0
+        time_taken_to_decelerate_from_final_horizontal_velocity = 0.08
+        # Full version: self.deceleration_from_final_horizontal_velocity = abs((0 - self.horizontal_suvat_v) / time_taken_to_decelerate_from_final_horizontal_velocity)
+        # Simplified version:
+        self.deceleration_from_final_horizontal_velocity = self.horizontal_suvat_v / time_taken_to_decelerate_from_final_horizontal_velocity
+
+        # ---------------------------------------
         # Jumping 
         
         self.allowed_to_jump = True
@@ -61,6 +94,7 @@ class Player(Generic, pygame.sprite.Sprite):
         # ---------------------------------------
         # Dynamic jumping
         self.jump_power = 0
+        self.performing_power_jump = False
 
         # The desired time for the player to reach the power jump height from the ground (The height variable is declared as a local variable inside the handle movement method)
         self.desired_time_to_reach_power_jump_height = 0.32
@@ -151,7 +185,7 @@ class Player(Generic, pygame.sprite.Sprite):
         self.animation_frame_counter = 0
 
         # Draw the player onto the main screen
-        #self.draw(surface = self.surface, x = (self.rect.x - self.camera_position[0]), y = (self.rect.y - self.camera_position[1]))
+        self.draw(surface = self.surface, x = (self.rect.x - self.camera_position[0]), y = (self.rect.y - self.camera_position[1]))
 
     # ---------------------------------------------------------------------------------
     # Movement           
@@ -250,6 +284,9 @@ class Player(Generic, pygame.sprite.Sprite):
             # If the player is holding the spacebar button
             if pygame.key.get_pressed()[pygame.K_SPACE]:
                 
+                # Set the attribute that the player is performing a power jump to True
+                self.performing_power_jump = True
+
                 # Draw and update the jump power indicator
                 self.draw_jump_power_indicator()
 
@@ -287,6 +324,12 @@ class Player(Generic, pygame.sprite.Sprite):
 
                 # Reset the jump power
                 self.jump_power = 0
+
+                # Reset the player's horizontal velocity 
+                self.horizontal_suvat_u = 0
+
+                # Reset the attribute that the player is performing a power jump back to False
+                self.performing_power_jump = False
 
                 # Make the player jump
                 self.jump()
@@ -444,65 +487,156 @@ class Player(Generic, pygame.sprite.Sprite):
         # Set the new value for v based on the delta time  
         self.falling_suvat_u += (self.falling_suvat_a * self.delta_time)
     
-    def handle_player_movement(self):
-        
-        # ---------------------------------------------------------------------------------
-        # Horizontal movement
-
-        # The distance the player travels in the x axis with each key press
-
-        pygame.draw.line(self.surface, "white", (self.last_tile_position[0], 0), (self.last_tile_position[0], self.surface.get_height()))
+    def handle_horizontal_movement(self):
 
         # Hold the current x position of the player in temporary variables 
         position_x, position_x_2 = self.rect.x, self.rect.x
 
-        # Acceleration and initial speed are testing values, so may change
-        suvat_a = 2
-        suvat_u = 192
-        # s = ut + 1/2(a)(t)^2
-        suvat_s = (suvat_u * self.delta_time) + (0.5 * suvat_a * (self.delta_time ** 2))
-
         # If the "a" key is pressed
         if pygame.key.get_pressed()[pygame.K_a]:
+            
+            # If the player isn't decelerating currently
+            if self.decelerating == False:
 
-            # Set the player to face left
-            self.facing_right = False
+                # Set the player to face left (allows players to change where the jump power indicator is drawn on the screen)
+                self.facing_right = False
 
-            # If the player isn't charging up a power jump
-            if self.jump_power == 0:
+                # If the player is not performing a power jump currently
+                if self.performing_power_jump == False:
 
-                # If moving left will place the player out of the screen
-                if self.rect.left - suvat_s <= 0:
-                    # Set the player's x position to be at 0
-                    self.rect.left = 0
+                    # ---------------------------------------------------------------------------------
+                    # Acceleration
 
-                # Otherwise
-                elif self.rect.left - suvat_s > 0:
-                    # Move the player left
-                    position_x += self.handle_tile_collisions(movement_direction = ("x", "left"), movement_speed = - suvat_s)
-                    self.rect.x = round(position_x)
+                    # If the current velocity has not reached the final velocity set for the player
+                    if self.horizontal_suvat_u < self.horizontal_suvat_v:
+                        # Increase the current velocity
+                        self.horizontal_suvat_u += (self.horizontal_suvat_a * self.delta_time)
+
+                    # Limit the current velocity to the final velocity set for the player (in case that the current velocity is greater)
+                    self.horizontal_suvat_u = min(self.horizontal_suvat_u, self.horizontal_suvat_v)
+
+                    # Set the distance travelled based on the current velocity
+                    self.horizontal_suvat_s = ((self.horizontal_suvat_u * self.delta_time) + (0.5 * self.horizontal_suvat_a * (self.delta_time ** 2)))
+
+                    # ---------------------------------------------------------------------------------
+                    # Moving the player
+
+                    # If moving left will place the player out of the screen
+                    if self.rect.left - self.horizontal_suvat_s <= 0:
+                        # Set the player's x position to be at 0
+                        self.rect.left = 0
+
+                    # Otherwise
+                    elif self.rect.left - self.horizontal_suvat_s > 0:
+                        # Move the player left
+                        position_x += self.handle_tile_collisions(movement_direction = ("x", "left"), movement_speed = - self.horizontal_suvat_s)
+                        self.rect.x = round(position_x)
 
 
         # If the "d" key is pressed
         if pygame.key.get_pressed()[pygame.K_d]:
 
-            # Set the player to face right
-            self.facing_right = True
+            # If the player isn't decelerating currently
+            if self.decelerating == False:
+                
+                # Set the player to face right (allows players to change where the jump power indicator is drawn on the screen)
+                self.facing_right = True
 
-            # If the player isn't charging up a power jump
+                # If the player is not performing a power jump currently
+                if self.performing_power_jump == False:
+                    
+                    # ---------------------------------------------------------------------------------
+                    # Acceleration
+
+                    # If the current velocity has not reached the final velocity set for the player
+                    if self.horizontal_suvat_u < self.horizontal_suvat_v:
+                        # Increase the current velocity
+                        self.horizontal_suvat_u += (self.horizontal_suvat_a * self.delta_time)
+
+                    # Limit the current velocity to the final velocity set for the player (in case that the current velocity is greater)
+                    self.horizontal_suvat_u = min(self.horizontal_suvat_u, self.horizontal_suvat_v)
+
+                    # Set the distance travelled based on the current velocity
+                    self.horizontal_suvat_s = ((self.horizontal_suvat_u * self.delta_time) + (0.5 * self.horizontal_suvat_a * (self.delta_time ** 2)))
+
+                    # ---------------------------------------------------------------------------------
+                    # Moving the player
+
+                    # If moving right will place the player out of the tile map / out of the screen
+                    if self.rect.right + self.horizontal_suvat_s >= self.last_tile_position[0]:
+                        # Set the player's right position to be at the last tile position in the tile map
+                        self.rect.right = self.last_tile_position[0]
+
+                    # Otherwise
+                    else:
+                        # Move the player right
+                        position_x_2 += self.handle_tile_collisions(movement_direction = ("x", "right"), movement_speed = self.horizontal_suvat_s)
+                        self.rect.x = round(position_x_2)
+
+        # ---------------------------------------------------------------------------------
+        # Deceleration
+
+        # If the player has let go of both horizontal movement input keys or if the deceleration has already started, but the player tried to stop it by going against the direction of deceleration
+        if (pygame.key.get_pressed()[pygame.K_a] == False and pygame.key.get_pressed()[pygame.K_d] == False) or self.decelerating == True:
+            
+            # If the player is not charging a power jump
             if self.jump_power == 0:
+                
+                # Set the decelerating player attribute to True
+                self.decelerating = True
 
-                # If moving right will place the player out of the tile map / out of the screen
-                if self.rect.right + suvat_s >= self.last_tile_position[0]:
-                    # Set the player's right position to be at the last tile position in the tile map
-                    self.rect.right = self.last_tile_position[0]
+                # If the player has stopped decelerating
+                if self.horizontal_suvat_u == 0:
+                    # Set the decelerating player attribute back to False
+                    self.decelerating = False
 
-                # Otherwise
-                else:
-                    # Move the player right
-                    position_x_2 += self.handle_tile_collisions(movement_direction = ("x", "right"), movement_speed = suvat_s)
-                    self.rect.x = round(position_x_2)
+                # If the player's current velocity is greater than 0
+                if self.horizontal_suvat_u > 0:
+                    # Decelerate the player / decrease the velocity
+                    self.horizontal_suvat_u -= (self.deceleration_from_final_horizontal_velocity * self.delta_time)
 
+                # Limit the current velocity to 0
+                self.horizontal_suvat_u = max(self.horizontal_suvat_u, 0)
+
+                # Set the distance travelled based on the current velocity
+                self.horizontal_suvat_s = ((self.horizontal_suvat_u * self.delta_time) + (0.5 * self.horizontal_suvat_a * (self.delta_time ** 2)))
+
+                # If the player was facing right 
+                if self.facing_right == True:
+
+                    # If moving right will place the player out of the tile map / out of the screen
+                    if self.rect.right + self.horizontal_suvat_s >= self.last_tile_position[0]:
+                        # Set the player's right position to be at the last tile position in the tile map
+                        self.rect.right = self.last_tile_position[0]
+
+                    # Otherwise
+                    else:
+                        # Move the player right
+                        position_x_2 += self.handle_tile_collisions(movement_direction = ("x", "right"), movement_speed = self.horizontal_suvat_s)
+                        self.rect.x = round(position_x_2)
+
+                # If the player was facing left
+                elif self.facing_right == False:
+        
+                    # If moving left will place the player out of the screen
+                    if self.rect.left - self.horizontal_suvat_s <= 0:
+                        # Set the player's x position to be at 0
+                        self.rect.left = 0
+
+                    # Otherwise
+                    elif self.rect.left - self.horizontal_suvat_s > 0:
+                        # Move the player left
+                        position_x += self.handle_tile_collisions(movement_direction = ("x", "left"), movement_speed = - self.horizontal_suvat_s)
+                        self.rect.x = round(position_x)
+
+    def handle_player_movement(self):
+        
+        # ---------------------------------------------------------------------------------
+        # Horizontal movement
+
+        # Handle horizontal movement
+        self.handle_horizontal_movement()
+        
         # ---------------------------------------------------------------------------------
         # Vertical movement
         
@@ -624,7 +758,7 @@ class Player(Generic, pygame.sprite.Sprite):
     def run(self):
         
         pygame.draw.line(self.surface, "white", (self.surface.get_width() / 2, 0), (self.surface.get_width() / 2, self.surface.get_height()))
-
+        print(self.horizontal_suvat_u)
         # Play animations
         self.play_animation()
 
