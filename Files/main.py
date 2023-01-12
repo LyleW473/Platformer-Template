@@ -6,7 +6,7 @@ from game_states_controller import GameStatesController
 class Main:
     def __init__(self):
 
-        # Pygame set-upw
+        # Pygame set-up
         pygame.init()
 
         # Set the caption
