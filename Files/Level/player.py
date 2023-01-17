@@ -1,4 +1,4 @@
-import pygame, time
+import pygame, os
 from Global.generic import Generic
 from Global.settings import *
 
@@ -9,107 +9,37 @@ class Player(Generic, pygame.sprite.Sprite):
         self.surface = surface
 
         # ---------------------------------------------------------------------------------
+        # Movement
+
+        self.declare_movement_attributes()
+
+        # ---------------------------------------------------------------------------------
         # Animations
 
-        self.animation_list = []
-        self.animation_index = 0 
-        self.animation_cooldown = 3000 
-        self.animation_frame_counter = 0
-
-        # Animation loading
-        for i in range(0, 1): 
-            # Load the border animation images
-            animation_image = pygame.image.load(f"graphics/Player/{i}.png").convert_alpha()
-            # Append the animation image to the animations list
-            self.animation_list.append(animation_image)
+        # Load the animation images
+        self.load_animations()
 
         # Inherit from the Generic class, which has basic attributes and methods.
-        Generic.__init__(self, x = x, y = y, image = self.animation_list[0])
+        Generic.__init__(self, x = x, y = y, image = self.animations_dict[self.current_player_element][self.current_animation_state][self.animation_index])
 
         # Inherit from pygame's sprite class
         pygame.sprite.Sprite.__init__(self) 
 
         # ---------------------------------------------------------------------------------
-        # Movement 
+        # Collisions
         """
-        self.delta_time = delta_time
-        self.movement_distance_x = 200 * self.delta_time
-        self.move_distance_y = int(150 * self.delta_time)
+        self.camera_position = None # Position of the camera. This is updated inside "Game" class
+        self.last_tile_position = None # Position of the last tile that the player can be on. This will be updated by "Game" when the level is created
+        self.closest_ground_tile = None # Used to hold the closest ground tile to the player.
         """
-        # Attributes that determine whether the player is facing left or right
-        self.facing_right = True
+        self.neighbouring_tiles_dict = {} # Used to hold the neighbouring tiles near the player (i.e. within 1 tile of the player, horizontally and vertically)
 
-        # ---------------------------------------
-        # Horizontal movement
-
-        # Set the initial horizontal velocity to be 0
-        self.horizontal_suvat_u = 0
-
-        # Calculate the velocity that the player moves at given a distance that the player travels within a given time span
-
-        # After re-arranging s = ut + 1/2(a)(t^2), v is given by the equation: (2s - a(t)^2) / 2t, where a is 0 because acceleration is constant
-        time_to_travel_distance_at_final_horizontal_velocity = 0.5 # t
-        distance_travelled_at_final_horizontal_velocity = 96 # s
-        # Full version: self.horizontal_suvat_v = ((2 * distance_travelled_at_final_horizontal_velocity) - (0 * (time_to_travel_distance_at_final_horizontal_velocity ** 2)) / (2 * time_to_travel_distance_at_final_horizontal_velocity))
-        # Simplified version:
-        self.horizontal_suvat_v = ((2 * distance_travelled_at_final_horizontal_velocity) / (2 * time_to_travel_distance_at_final_horizontal_velocity))
-
-        # Calculate the acceleration needed for the player to reach self.horizontal_suvat_v within a given time span
-
-        # After re-arranging v = u + at, a is given by the equation: (v - u) / t, where u is 0
-        time_to_reach_final_horizontal_velocity = 0.1
-        # Full version: self.horizontal_suvat_a = (self.horizontal_suvat_v - 0) / time_to_reach_final_horizontal_velocity
-        # Simplified version:
-        self.horizontal_suvat_a = self.horizontal_suvat_v / time_to_reach_final_horizontal_velocity
-
-        # Deceleration
-        self.decelerating = False
+        # ---------------------------------------------------------------------------------
+        # Additional movement 
         
-        # Calculate the deceleration required for the player to decelerate from the final horizontal velocity to 0 (Store as absolute value)
-
-        # After re-arranging v = u + at, a is given by the equation: (v - u) / t, where v is 0
-        self.time_taken_to_decelerate_from_final_horizontal_velocity = 0.06
-        # Full version: self.deceleration_from_final_horizontal_velocity = abs((0 - self.horizontal_suvat_v) / time_taken_to_decelerate_from_final_horizontal_velocity)
-        # Simplified version:
-        self.deceleration_from_final_horizontal_velocity = self.horizontal_suvat_v / self.time_taken_to_decelerate_from_final_horizontal_velocity
-
-        # ---------------------------------------
-        # Jumping 
-        
-        self.allowed_to_jump = True
-        self.allowed_to_double_jump = False
-
-        # The desired height of the initial jump and double jump
-        self.desired_jump_height = TILE_SIZE * 2 # 64
-        self.desired_double_jump_height = (TILE_SIZE * 2) + (TILE_SIZE / 2) # 80
-
-        # The desired time for the player to reach that jump height from the ground (in seconds)
-        self.desired_time_to_reach_jump_height = 0.28
-        self.desired_time_to_reach_double_jump_height = 0.3
-
-        # The constant acceleration is given by the equation: - ( (2s) / (t^2) ), where s is the desired height and t is the desired time to reach the jump height
-        self.jumping_suvat_a = - ((2 * self.desired_jump_height) / (self.desired_time_to_reach_jump_height ** 2))
-        # The initial velocity is given by the equation: 2s / t, where s is the desired height and t is the desired time to reach the jump height
-        self.jumping_suvat_u = (2 * self.desired_jump_height) / self.desired_time_to_reach_jump_height
-
-        # ---------------------------------------
-        # Dynamic jumping
-
-        # Power refers to how much higher the player can jump
-        self.jump_power = 0
-
-        # Attribute to track whenever the player is charging up a power jump
-        self.performing_power_jump = False
-
-        # The desired time for the player to reach the power jump height from the ground (The height variable is declared as a local variable inside the handle movement method)
-        self.desired_time_to_reach_power_jump_height = 0.32
-
-        # The chosen jump power indicator version that the player selected in the settings (YET TO IMP<EMENT)
-        self.chosen_jump_power_indicator_version = "Special-Middle"
-
-        # Dictionary possibly for players to change between jump power indicator versions inside the menus
+        # Power jumping
+        # The dictionary for the different versions of the jump power indicators (possibly for players to change between jump power indicator versions inside the menus)
         # Values are: jump_power_indicator_y, jump_power_indicator_height, Draw rect y position, Draw rect height
-        # The dictionary for the different versions of the jump power indicators
         self.jump_power_indicator_versions_dict = {
             "Top": [
             max(self.rect.top - round(self.jump_power), self.rect.top - (3 * TILE_SIZE)),
@@ -141,7 +71,361 @@ class Player(Generic, pygame.sprite.Sprite):
             4.5 * TILE_SIZE 
             ]
             }
-            
+        # ---------------------------------------------------------------------------------
+
+    def load_animations(self):
+
+        # Set the current player element (i.e. Ice, Fire, Combined) and player state (Upon instantiation, the player should be in the idle state)
+        self.current_player_element = "Ice" # ["Combined", "Fire", "Ice"]
+        self.current_animation_state = "Idle"
+
+        # A dictionary that will hold all of the animations
+        self.animations_dict = {"Ice": {"Idle": [pygame.image.load(f"graphics/Player/Ice/Idle/{i}.png") for i in range(len(os.listdir("graphics/Player/Ice/Idle")))],
+                                        "Run": [pygame.image.load(f"graphics/Player/Ice/Run/{i}.png") for i in range(len(os.listdir("graphics/Player/Ice/Run")))],
+                                        "Jump": [pygame.image.load(f"graphics/Player/Ice/Jump/{i}.png") for i in range(len(os.listdir("graphics/Player/Ice/Jump")))],
+                                        "Fall": [pygame.image.load(f"graphics/Player/Ice/Fall/{i}.png") for i in range(len(os.listdir("graphics/Player/Ice/Fall")))],
+                                        "Land": [pygame.image.load(f"graphics/Player/Ice/Land/{i}.png") for i in range(len(os.listdir("graphics/Player/Ice/Land")))],
+                                        "PowerJump": [pygame.image.load(f"graphics/Player/Ice/PowerJump/{i}.png") for i in range(len(os.listdir("graphics/Player/Ice/PowerJump")))]
+                                        }}
+
+        # Create attributes used for the animations
+        self.animation_index = 0 # Tracks which animation frame to show
+        self.animation_frame_counter = 0 # Used to track how much time has passed since the last frame update
+        
+        # Dictionary to hold the time between each animation frame for each animation 
+        # Values are in ms
+        self.animation_frame_cooldowns_dict = {"Idle": 80,
+                                            "Run": 50, 
+                                            "Jump": (self.desired_time_to_reach_jump_height * 1000) / len(self.animations_dict[self.current_player_element]["Jump"]),
+                                            "Fall": (self.desired_time_to_reach_fall_height * 1000) / len(self.animations_dict[self.current_player_element]["Fall"]),
+                                            "Land": (400 / len(self.animations_dict[self.current_player_element]["Land"])),
+                                            "PowerJump": 80
+          }
+
+    def change_players_animation_state(self):
+
+        #print(self.current_animation_state, self.animation_index)
+
+        # If the player is falling
+        if self.falling == True:
+        
+            # If the current animation state has not been set to "Fall" yet
+            if self.current_animation_state != "Fall":
+                # Set the current animation state to "Fall"
+                self.current_animation_state = "Fall"
+
+                # Reset the animation frame counter and index
+                self.animation_frame_counter = 0
+                self.animation_index = 0
+
+        # If the player has jumped (initial jump)
+        elif self.allowed_to_jump == False and self.allowed_to_double_jump == True:
+
+            # If the current animation state has not been set to "Jump" yet
+            if self.current_animation_state != "Jump":
+                # Set the current animation state to "Jump"
+                self.current_animation_state = "Jump"
+
+                # Reset the animation frame counter and index
+                self.animation_frame_counter = 0
+                self.animation_index = 0
+
+        # If the player has double jumped
+        elif pygame.key.get_pressed()[pygame.K_SPACE] and (self.allowed_to_jump == False and self.allowed_to_double_jump == False):
+            # If the current animation state has not been set to "Jump" yet
+            if self.current_animation_state != "Jump":
+                # Set the current animation state to "Jump"
+                self.current_animation_state = "Jump"
+
+                # Reset the animation frame counter and index
+                self.animation_frame_counter = 0
+                self.animation_index = 0
+
+        # If the player is charging up a power jump
+        elif pygame.key.get_pressed()[pygame.K_SPACE] and (self.allowed_to_jump == True and self.allowed_to_double_jump == False):
+
+            # If the current animation state has not been set to "PowerJump" yet
+            if self.current_animation_state != "PowerJump":
+                # Set the current animation state to "PowerJump"
+                self.current_animation_state = "PowerJump"
+
+                # Reset the animation frame counter and index
+                self.animation_frame_counter = 0
+                self.animation_index = 0
+
+        # If the player is running left or right
+        elif pygame.key.get_pressed()[pygame.K_a] or pygame.key.get_pressed()[pygame.K_d]:
+
+            """ 
+            Don't play the run animation and play the idle animation:
+                - If the player is at the beginning or end of the tile map
+                or 
+                - If the player moving will collide with the a neighbouring tile
+            """
+            if (self.rect.x == 0 or self.rect.right == self.last_tile_position[0]) or \
+                (pygame.Rect(self.rect.x - 1, self.rect.y, self.rect.width, self.rect.height).collidedict(self.neighbouring_tiles_dict) != None or pygame.Rect(self.rect.x + 1, self.rect.y, self.rect.width, self.rect.height).collidedict(self.neighbouring_tiles_dict) != None):
+                
+                # If the current animation state has not been set to "Idle" yet
+                if self.current_animation_state != "Idle":
+                    # Set the current animation state to "Idle"
+                    self.current_animation_state = "Idle"
+
+                    # Reset the animation frame counter and index
+                    self.animation_frame_counter = 0
+                    self.animation_index = 0
+
+            # If the player isn't colliding with a neighbouring tile or is not at the beginning or end of the tile map
+            else:
+                # If the current animation state has not been set to "Run" yet
+                if self.current_animation_state != "Run":
+                    # If the player is not currently jumping
+                    if (self.allowed_to_jump == True and self.allowed_to_double_jump == False):
+                        # Set the current animation state to "Run"
+                        self.current_animation_state = "Run"
+
+                        # Reset the animation frame counter and index
+                        self.animation_frame_counter = 0
+                        self.animation_index = 0
+
+        # If the player has stopped running left or right
+        elif pygame.key.get_pressed()[pygame.K_a] == False and pygame.key.get_pressed()[pygame.K_d] == False:
+            # If the current animation state has not been set to "Idle" yet
+            if self.current_animation_state != "Idle":
+                
+                # If the player has stopped running or has just landed after jumping
+                if self.current_animation_state == "Run":
+                    # Set the current animation state to "Idle"
+                    self.current_animation_state = "Idle"
+
+                    # Reset the animation frame counter and index
+                    self.animation_frame_counter = 0
+                    self.animation_index = 0
+
+
+    def play_animations(self):
+        
+        # Check whether we need to change the player's animation state based on what the player is doing
+        self.change_players_animation_state()
+
+        # Increment the animation frame counter based on time
+        self.animation_frame_counter += 1000 * self.delta_time
+
+        """ Temporary variables to store the: 
+            - Current player animation state's list, e.g. The list containing the images of the "Idle" animation
+            - The current animation image
+            """
+        current_player_state_animation_list = self.animations_dict[self.current_player_element][self.current_animation_state]
+        current_animation_image = self.animations_dict[self.current_player_element][self.current_animation_state][self.animation_index]
+
+        # ---------------------------------------------------------------------------------
+        # Set the image to be this animation frame
+
+        # If the player is facing right
+        if self.facing_right == True:
+            # Set the player image as facing right
+            self.image = current_animation_image
+        # If the player is facing left
+        else:
+            # Set the player image as facing left
+            self.image = pygame.transform.flip(current_animation_image, True, False)
+
+        # ---------------------------------------------------------------------------------
+        # Changing the animation frame
+
+        # Update the animation frames based on the current animation state
+        match self.current_animation_state:
+
+            case "Idle":
+                # If enough time has passed since the last frame was played or since the animation was reset
+                if self.animation_frame_counter >= self.animation_frame_cooldowns_dict["Idle"]:
+
+                    # If the animation index isn't at the end of the list 
+                    if self.animation_index < (len(current_player_state_animation_list) - 1):
+                        # Increment the animation index
+                        self.animation_index += 1
+
+                    # If the animation index is at the end of the list
+                    else:
+                        # Reset the animation index
+                        self.animation_index = 0
+                
+                    # Reset the animation frame counter
+                    self.animation_frame_counter = 0
+
+            case "Run":
+                # If enough time has passed since the last frame was played or since the animation was reset
+                if self.animation_frame_counter >= self.animation_frame_cooldowns_dict["Run"]:
+
+                    # If the animation index isn't at the end of the list 
+                    if self.animation_index < (len(current_player_state_animation_list) - 1):
+                        # Increment the animation index
+                        self.animation_index += 1
+
+                    # If the animation index is at the end of the list
+                    else:
+                        # Reset the animation index
+                        self.animation_index = 0
+                
+                    # Reset the animation frame counter
+                    self.animation_frame_counter = 0
+
+            case "Jump":
+                # If enough time has passed since the last frame was played or since the animation was reset
+                if self.animation_frame_counter >= self.animation_frame_cooldowns_dict["Jump"]:
+                    
+                    # If the animation index isn't at the end of the list 
+                    if self.animation_index < (len(current_player_state_animation_list) - 1):
+                        # Increment the animation index
+                        self.animation_index += 1
+
+                # If the player has reached the peak of the jump
+                if self.jumping_suvat_u <= 0:
+                    # Set the current animation state to "Fall"
+                    self.current_animation_state = "Fall"
+
+                    # Reset the animation index and reset the animation frame counter
+                    self.animation_index = 0
+                    self.animation_frame_counter = 0
+
+            case "Fall":
+                # If enough time has passed since the last frame was played or since the animation was reset
+                if self.animation_frame_counter >= self.animation_frame_cooldowns_dict["Fall"]:
+                    
+                    # If the animation index isn't at the end of the list 
+                    if self.animation_index < (len(current_player_state_animation_list) - 1):
+                        # Increment the animation index and reset the animation frame counter
+                        self.animation_index += 1
+                        self.animation_frame_counter = 0
+
+                    # If the player is colliding with the closest ground tile after falling
+                    if self.closest_ground_tile != None and pygame.Rect(self.rect.x, self.rect.y + (TILE_SIZE / 2), self.rect.width, self.rect.height).colliderect(self.closest_ground_tile.rect):
+                        # Set the current animation state to "Land"
+                        self.current_animation_state = "Land"
+
+                        # Reset the animation index and reset the animation frame counter
+                        self.animation_index = 0
+                        self.animation_frame_counter = 0
+
+            case "Land":
+                # If enough time has passed since the last frame was played or since the animation was reset
+                if self.animation_frame_counter >= self.animation_frame_cooldowns_dict["Land"]:
+                    
+                    # If the animation index isn't at the end of the list 
+                    if self.animation_index < (len(current_player_state_animation_list) - 1):
+                        # Increment the animation index
+                        self.animation_index += 1
+                        self.animation_frame_counter = 0
+
+                    # If we have finished the "Land" animation
+                    elif self.animation_index == (len(current_player_state_animation_list) - 1):
+                        # Set the current animation state to "Idle"
+                        self.current_animation_state = "Idle"
+
+                        # Reset the animation index and reset the animation frame counter
+                        self.animation_index = 0
+                        self.animation_frame_counter = 0
+
+            case "PowerJump":
+                # If enough time has passed since the last frame was played or since the animation was reset
+                if self.animation_frame_counter >= self.animation_frame_cooldowns_dict["PowerJump"]:
+
+                    # If the animation index isn't at the end of the list 
+                    if self.animation_index < (len(current_player_state_animation_list) - 1):
+                        # Increment the animation index
+                        self.animation_index += 1
+                        # Reset the animation frame counter
+                        self.animation_frame_counter = 0
+
+                    elif self.animation_index == (len(current_player_state_animation_list) - 1):
+                        # Set the animation frame to restart from a frame where the only change is the scarf
+                        self.animation_index = 1
+                        # Reset the animation frame counter
+                        self.animation_frame_counter = 0
+        # ---------------------------------------------------------------------------------
+        # Draw the player onto the main screen
+        self.draw(surface = self.surface, x = (self.rect.x - self.camera_position[0]), y = (self.rect.y - self.camera_position[1]))
+
+    # ---------------------------------------------------------------------------------
+    # Movement       
+
+    def declare_movement_attributes(self):
+
+        """
+        self.delta_time = delta_time
+        self.movement_distance_x = 200 * self.delta_time
+        self.move_distance_y = int(150 * self.delta_time)
+        """
+        # Attributes that determine whether the player is facing left or right
+        self.facing_right = True
+
+        # ---------------------------------------
+        # Horizontal movement
+
+        # Set the initial horizontal velocity to be 0
+        self.horizontal_suvat_u = 0
+
+        # Calculate the velocity that the player moves at given a distance that the player travels within a given time span
+
+        # After re-arranging s = ut + 1/2(a)(t^2), v is given by the equation: (2s - a(t)^2) / 2t, where a is 0 because acceleration is constant
+        time_to_travel_distance_at_final_horizontal_velocity = 0.5 # t
+        distance_travelled_at_final_horizontal_velocity = 3 * TILE_SIZE # s 
+        # Full version: self.horizontal_suvat_v = ((2 * distance_travelled_at_final_horizontal_velocity) - (0 * (time_to_travel_distance_at_final_horizontal_velocity ** 2)) / (2 * time_to_travel_distance_at_final_horizontal_velocity))
+        # Simplified version:
+        self.horizontal_suvat_v = ((2 * distance_travelled_at_final_horizontal_velocity) / (2 * time_to_travel_distance_at_final_horizontal_velocity))
+
+        # Calculate the acceleration needed for the player to reach self.horizontal_suvat_v within a given time span
+
+        # After re-arranging v = u + at, a is given by the equation: (v - u) / t, where u is 0
+        time_to_reach_final_horizontal_velocity = 0.1
+        # Full version: self.horizontal_suvat_a = (self.horizontal_suvat_v - 0) / time_to_reach_final_horizontal_velocity
+        # Simplified version:
+        self.horizontal_suvat_a = self.horizontal_suvat_v / time_to_reach_final_horizontal_velocity
+
+        # Deceleration
+        self.decelerating = False
+        
+        # Calculate the deceleration required for the player to decelerate from the final horizontal velocity to 0 (Store as absolute value)
+
+        # After re-arranging v = u + at, a is given by the equation: (v - u) / t, where v is 0
+        self.time_taken_to_decelerate_from_final_horizontal_velocity = 0.06
+        # Full version: self.deceleration_from_final_horizontal_velocity = abs((0 - self.horizontal_suvat_v) / time_taken_to_decelerate_from_final_horizontal_velocity)
+        # Simplified version:
+        self.deceleration_from_final_horizontal_velocity = self.horizontal_suvat_v / self.time_taken_to_decelerate_from_final_horizontal_velocity
+
+        # ---------------------------------------
+        # Jumping 
+        
+        self.allowed_to_jump = True
+        self.allowed_to_double_jump = False
+
+        # The desired height of the initial jump and double jump
+        self.desired_jump_height = TILE_SIZE * 2
+        self.desired_double_jump_height = (TILE_SIZE * 2) + (TILE_SIZE / 2)
+
+        # The desired time for the player to reach that jump height from the ground (in seconds)
+        self.desired_time_to_reach_jump_height = 0.28
+        self.desired_time_to_reach_double_jump_height = 0.3
+
+        # The constant acceleration is given by the equation: - ( (2s) / (t^2) ), where s is the desired height and t is the desired time to reach the jump height
+        self.jumping_suvat_a = - ((2 * self.desired_jump_height) / (self.desired_time_to_reach_jump_height ** 2))
+        # The initial velocity is given by the equation: 2s / t, where s is the desired height and t is the desired time to reach the jump height
+        self.jumping_suvat_u = (2 * self.desired_jump_height) / self.desired_time_to_reach_jump_height
+
+        # ---------------------------------------
+        # Dynamic jumping
+
+        # Power refers to how much higher the player can jump
+        self.jump_power = 0
+
+        # Attribute to track whenever the player is charging up a power jump
+        self.performing_power_jump = False
+
+        # The desired time for the player to reach the power jump height from the ground (The height variable is declared as a local variable inside the handle movement method)
+        self.desired_time_to_reach_power_jump_height = 0.32
+
+        # The chosen jump power indicator version that the player selected in the settings (YET TO IMP<EMENT)
+        self.chosen_jump_power_indicator_version = "Special-Middle"
+        
         # ---------------------------------------
         # Falling
         self.falling = False
@@ -156,59 +440,11 @@ class Player(Generic, pygame.sprite.Sprite):
         # The initial velocity is set to 0, which is when the player is where the player momentarily has 0 velocity and will start to fall.
         self.falling_suvat_u = 0 
 
-        # ---------------------------------------------------------------------------------
-        # Collisions
-        """
-        self.camera_position = None # Position of the camera. This is updated inside "Game" class
-        self.last_tile_position = None # Position of the last tile that the player can be on. This will be updated by "Game" when the level is created
-        self.closest_ground_tile = None # Used to hold the closest ground tile to the player.
-        """
-        self.neighbouring_tiles_dict = {} # Used to hold the neighbouring tiles near the player (i.e. within 1 tile of the player, horizontally and vertically)
-
-    def play_animation(self):
-        
-        # Increment the counter 
-        self.animation_frame_counter += 200
-    
-        # Set the image to be this animation frame
-
-        # If the player is facing right
-        if self.facing_right == True:
-            # Set the player image as facing right
-            self.image = self.animation_list[self.animation_index]
-        # If the player is facing left
-        else:
-            # Set the player image as facing left
-            self.image = pygame.transform.flip(self.animation_list[self.animation_index], True, False)
-
-        # If enough time has passed since the last frame was played or since the animation was reset
-        if self.animation_frame_counter > self.animation_cooldown:
-
-            # If the border animation index isn't at the end of the list 
-            if (self.animation_index < len(self.animation_list) - 1 ):
-                # Increment the index
-                self.animation_index += 1
-
-            # If the border animation index is at the end of the list
-            else:
-                # Reset the index
-                self.animation_index = 0
-        
-        # Reset the animation frame counter
-        self.animation_frame_counter = 0
-
-        # Draw the player onto the main screen
-        self.draw(surface = self.surface, x = (self.rect.x - self.camera_position[0]), y = (self.rect.y - self.camera_position[1]))
-
-    # ---------------------------------------------------------------------------------
-    # Movement           
-
     def reset_movement_attributes(self):
 
         # Once the player is back on the ground, the following attributes need to be reset
-        # If the player is 0 tiles away from the ground, then they must be on the ground
+        # If the player is colliding with the closest ground tile, the player must be on the ground
         if self.closest_ground_tile != None and self.rect.colliderect(pygame.Rect(self.closest_ground_tile.rect.x, self.closest_ground_tile.rect.y - 1, self.closest_ground_tile.rect.width, self.closest_ground_tile.rect.height)):
-
             # Allow the player to jump
             self.allowed_to_jump = True
 
@@ -303,7 +539,7 @@ class Player(Generic, pygame.sprite.Sprite):
                 # Draw and update the jump power indicator
                 self.draw_jump_power_indicator()
 
-                # If the current height generated is less than the maximum height the player can jump (5.5 x 32 pixels high)
+                # If the current height generated is less than the maximum height the player can jump 5.5 tiles
                 if (self.desired_jump_height + self.jump_power <= (5.5  * TILE_SIZE)):
                     # Keep increasing the jump power
                     self.jump_power += 112 * self.delta_time # Add 112 every second
@@ -313,12 +549,12 @@ class Player(Generic, pygame.sprite.Sprite):
 
                 # Set the desired power jump height
 
-                # If the power jump height is greater than or equal to 5.5 tiles (tile size of 32)
+                # If the power jump height is greater than or equal to 5.5 tiles
                 if self.desired_jump_height + round(self.jump_power) < (5.5 * TILE_SIZE):
                     # Set the power jump to a rounded number of the normal jump height with the jump power added on top
                     desired_power_jump_height = self.desired_jump_height + round(self.jump_power)
 
-                # If the power jump height is greater than or equal to 5.5 tiles (tile size of 32)
+                # If the power jump height is greater than or equal to 5.5 tiles
                 elif self.desired_jump_height + round(self.jump_power) >= (5.5 * TILE_SIZE):
                     # Set the power jump height to be at maximum, 5.5 tiles high
                     desired_power_jump_height = (5.5 * TILE_SIZE)
@@ -683,12 +919,12 @@ class Player(Generic, pygame.sprite.Sprite):
         if self.allowed_to_jump == False:
             # Start the jump algorithm 
             self.jump()
-
+        
         # ---------------------------------------
         # Falling
 
-        # If there is no closest ground tile or the player is not colliding with the closest ground tile
-        if self.closest_ground_tile == None or self.rect.colliderect(pygame.Rect(self.closest_ground_tile.rect.x, self.closest_ground_tile.rect.y - 1, self.closest_ground_tile.rect.width, self.closest_ground_tile.rect.height)) == False:
+        # If the player isn't colliding with any of its neighbouring tiles, it means that the player is floating
+        if pygame.Rect(self.rect.x, self.rect.y, self.rect.width, self.rect.height + 1).collidedict(self.neighbouring_tiles_dict) == None:
 
             """
             1st check: Player hasn't been set to falling and the player has not jumped yet
@@ -708,7 +944,7 @@ class Player(Generic, pygame.sprite.Sprite):
             # Start the falling algorithm
             self.fall()
 
-    def control_gravity_strength(self):
+    def temporary(self):
         # SAVE FOR LATER FOR SOMETHING ELSE 
         # Controls the strength of gravity and checks for collisions with the ground when falling down.
         # Also resets the jump related attributes when the player is on the ground
@@ -782,7 +1018,11 @@ class Player(Generic, pygame.sprite.Sprite):
         pygame.draw.line(self.surface, "white", (self.surface.get_width() / 2, 0), (self.surface.get_width() / 2, self.surface.get_height()))
 
         # Play animations
-        self.play_animation()
+        self.play_animations()
+
+        # TEMPORARY
+        for tile in self.neighbouring_tiles_dict.keys():
+            pygame.draw.rect(self.surface, "green", (tile.rect.x - self.camera_position[0], tile.rect.y - self.camera_position[1], tile.rect.width, tile.rect.height))
 
         # Track player movement
         self.handle_player_movement()

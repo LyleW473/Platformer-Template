@@ -10,7 +10,7 @@ class Game:
         self.screen = pygame.display.get_surface()  
 
         # Create a surface for which all objects will be drawn onto. This surface is then scaled and drawn onto the main screen
-        self.scaled_surface = pygame.Surface((screen_width / 2, screen_height / 2))
+        self.scaled_surface = pygame.Surface((screen_width / 8, screen_height / 8))
 
         # Attribute which is monitored by the game states controller
         self.running = False
@@ -56,7 +56,7 @@ class Game:
         # Used to change the camera mode depending on the size of the tile map
         
         # If the width of the tile map is one room
-        if self.last_tile_position[0] <= (screen_width / 2):
+        if self.last_tile_position[0] <= (self.scaled_surface.get_width() / 2):
             # Set the camera mode to "Static"
             self.camera_mode = "Static"
         
@@ -237,7 +237,7 @@ class Game:
         
         # Create a rect used for finding the closest ground tile, which starts from the bottom of the player to the bottom of the screen
         finding_closest_ground_tile_rect = pygame.Rect(self.player.rect.x, self.player.rect.bottom, self.player.image.get_width(), self.scaled_surface.get_height() - self.player.rect.bottom)
-        pygame.draw.rect(self.scaled_surface, "red", (finding_closest_ground_tile_rect.x - self.camera_position[0], finding_closest_ground_tile_rect.y - self.camera_position[1], finding_closest_ground_tile_rect.width, finding_closest_ground_tile_rect.height))
+        #pygame.draw.rect(self.scaled_surface, "red", (finding_closest_ground_tile_rect.x - self.camera_position[0], finding_closest_ground_tile_rect.y - self.camera_position[1], finding_closest_ground_tile_rect.width, finding_closest_ground_tile_rect.height))
 
         # Check for tiles inside the world tiles dictionary for collisions 
         closest_ground_tile = finding_closest_ground_tile_rect.collidedict(self.world_tiles_dict)
@@ -270,7 +270,7 @@ class Game:
         self.update_objects_delta_time(delta_time)
         
         # Fill the scaled surface with a colour
-        self.scaled_surface.fill("dodgerblue4")
+        self.scaled_surface.fill("darkolivegreen")
 
         # Update the camera position 
         self.update_camera_position()

@@ -3,4 +3,4 @@ screen_width = 1920
 screen_height = 1080
 
 # Tile size
-TILE_SIZE = 32
+TILE_SIZE = 16
