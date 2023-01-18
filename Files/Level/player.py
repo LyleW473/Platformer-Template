@@ -31,9 +31,11 @@ class Player(Generic, pygame.sprite.Sprite):
         self.camera_position = None # Position of the camera. This is updated inside "Game" class
         self.last_tile_position = None # Position of the last tile that the player can be on. This will be updated by "Game" when the level is created
         self.closest_ground_tile = None # Used to hold the closest ground tile to the player.
+
         """
         self.neighbouring_tiles_dict = {} # Used to hold the neighbouring tiles near the player (i.e. within 1 tile of the player, horizontally and vertically)
-
+        self.dx = 0 # The distance the player can move based on if there were any collisions
+        self.dy = 0 # The distance the player can move based on if there were any collisions
         # ---------------------------------------------------------------------------------
         # Additional movement 
         
@@ -73,6 +75,9 @@ class Player(Generic, pygame.sprite.Sprite):
             }
         # ---------------------------------------------------------------------------------
 
+    # ---------------------------------------------------------------------------------
+    # Animations
+
     def load_animations(self):
 
         # Set the current player element (i.e. Ice, Fire, Combined) and player state (Upon instantiation, the player should be in the idle state)
@@ -103,8 +108,6 @@ class Player(Generic, pygame.sprite.Sprite):
           }
 
     def change_players_animation_state(self):
-
-        #print(self.current_animation_state, self.animation_index)
 
         # If the player is falling
         if self.falling == True:
@@ -200,7 +203,6 @@ class Player(Generic, pygame.sprite.Sprite):
                     # Reset the animation frame counter and index
                     self.animation_frame_counter = 0
                     self.animation_index = 0
-
 
     def play_animations(self):
         
@@ -298,7 +300,7 @@ class Player(Generic, pygame.sprite.Sprite):
                         self.animation_frame_counter = 0
 
                     # If the player is colliding with the closest ground tile after falling
-                    if self.closest_ground_tile != None and pygame.Rect(self.rect.x, self.rect.y + (TILE_SIZE / 2), self.rect.width, self.rect.height).colliderect(self.closest_ground_tile.rect):
+                    if self.closest_ground_tile != None and pygame.Rect(self.rect.x, self.rect.y + (TILE_SIZE * (0.75)), self.rect.width, self.rect.height).colliderect(self.closest_ground_tile.rect):
                         # Set the current animation state to "Land"
                         self.current_animation_state = "Land"
 
@@ -352,8 +354,7 @@ class Player(Generic, pygame.sprite.Sprite):
 
         """
         self.delta_time = delta_time
-        self.movement_distance_x = 200 * self.delta_time
-        self.move_distance_y = int(150 * self.delta_time)
+
         """
         # Attributes that determine whether the player is facing left or right
         self.facing_right = True
@@ -363,6 +364,8 @@ class Player(Generic, pygame.sprite.Sprite):
 
         # Set the initial horizontal velocity to be 0
         self.horizontal_suvat_u = 0
+        # The horizontal distance the player can move
+        self.horizontal_suvat_s = 0
 
         # Calculate the velocity that the player moves at given a distance that the player travels within a given time span
 
@@ -410,6 +413,8 @@ class Player(Generic, pygame.sprite.Sprite):
         self.jumping_suvat_a = - ((2 * self.desired_jump_height) / (self.desired_time_to_reach_jump_height ** 2))
         # The initial velocity is given by the equation: 2s / t, where s is the desired height and t is the desired time to reach the jump height
         self.jumping_suvat_u = (2 * self.desired_jump_height) / self.desired_time_to_reach_jump_height
+        # The distance the player moves when jumping (s = ut + 1/2(a)(t^2))
+        self.jumping_suvat_s = 0
 
         # ---------------------------------------
         # Dynamic jumping
@@ -440,86 +445,48 @@ class Player(Generic, pygame.sprite.Sprite):
         # The initial velocity is set to 0, which is when the player is where the player momentarily has 0 velocity and will start to fall.
         self.falling_suvat_u = 0 
 
-    def reset_movement_attributes(self):
+    def reset_movement_attributes(self):                                        
 
         # Once the player is back on the ground, the following attributes need to be reset
-        # If the player is colliding with the closest ground tile, the player must be on the ground
-        if self.closest_ground_tile != None and self.rect.colliderect(pygame.Rect(self.closest_ground_tile.rect.x, self.closest_ground_tile.rect.y - 1, self.closest_ground_tile.rect.width, self.closest_ground_tile.rect.height)):
-            # Allow the player to jump
-            self.allowed_to_jump = True
+        # If the player is colliding with the closest ground tile and
+        if self.closest_ground_tile != None and pygame.Rect(self.rect.x, self.rect.y + 1, self.rect.width, self.rect.height).colliderect(self.closest_ground_tile.rect):
 
-            # Don't allow the player to jump
-            self.allowed_to_double_jump = False
+            # If the player has just landed on the ground after falling or has landed after jumping
+            if (self.falling_suvat_u <= 0 and self.falling == True) or (self.jumping_suvat_u <= 0):
 
-            # The initial speed of the jump should be set back to default
-            self.jumping_suvat_u = (2 * self.desired_jump_height) / self.desired_time_to_reach_jump_height
+                # Allow the player to jump
+                self.allowed_to_jump = True
 
-            # Acceleration needs to be reset (In case that the player also double jumped)
-            self.jumping_suvat_a = - ((2 * self.desired_jump_height) / (self.desired_time_to_reach_jump_height ** 2))
+                # Don't allow the player to double jump
+                self.allowed_to_double_jump = False
 
-            # Set falling to False
-            self.falling = False
+                # The initial speed of the jump should be set back to default
+                self.jumping_suvat_u = (2 * self.desired_jump_height) / self.desired_time_to_reach_jump_height
 
-            # Set the falling speed back to 0
-            self.falling_suvat_u = 0
+                # Acceleration needs to be reset (In case that the player also double jumped)
+                self.jumping_suvat_a = - ((2 * self.desired_jump_height) / (self.desired_time_to_reach_jump_height ** 2))
+
+                # Set the distance the player moves whilst jumping to 0 
+                # Note: This is because once the player has landed after jumping, this attribute will be negative, which will affect the next jump
+                self.jumping_suvat_s = 0 
+
+                # Set falling to False
+                self.falling = False
+
+                # Set the falling speed back to 0
+                self.falling_suvat_u = 0
 
     def jump(self):
 
-        # The method used to move the player when jumping or double jumping 
-
-        # Equation used: s = vt + 1/2(a)(t^2)
-        self.jumping_suvat_s = (self.jumping_suvat_u * self.delta_time) + (0.5 * self.jumping_suvat_a * (self.delta_time ** 2))
-        
-        # Move the player up / down based on the displacement
+        # The method used to move the player when jumping, double jumping or power jumping
         new_position = self.rect.y 
 
-        # If the the displacement is positive, it means we are at the stage in the parabola where we are moving up
-        if self.jumping_suvat_s > 0:
-            # Set the new position, based on if there are any collisions or not
-            new_position -= self.handle_tile_collisions(movement_direction = ("y", "up"), movement_speed = self.jumping_suvat_s)
+        self.jumping_suvat_s = (self.jumping_suvat_u * self.delta_time) + (0.5 * self.jumping_suvat_a * (self.delta_time ** 2))
 
-        # If the displacement is zero or negative, it means we are at the stage in the parabola where we are moving down
-        elif self.jumping_suvat_s <= 0:
-            # Set the new position, based on if there are any collisions or not
-            new_position -= self.handle_tile_collisions(movement_direction = ("y", "down"), movement_speed = self.jumping_suvat_s)
+        # Move the player up / down based on the displacement
+        new_position -= self.dy
+        self.rect.y = round(new_position)
 
-        
-        """ Set the player's position based on whether "new position + self.rect.height" (which is the bottom of the player rect) is greater than the closest ground tile.
-        - The int is so that if the position of the bottom of the player was 320.72829995... and the top of the tile was 320, the position should be truncated.
-        - The round is so that if the position of the bottom of the player was 319.92381232... and the top of the tile was 320, the position should be rounded up.
-        """
-        
-        # If we are at the stage in the jump where the player is moving up
-        if self.jumping_suvat_s > 0:
-            # Set the player's y position as the rounded new position
-            self.rect.y = round(new_position)
-
-        # If we are at the stage in the jump where the player is moving down
-        elif self.jumping_suvat_s <= 0:
-            
-            # If there is not closest ground tile
-            if self.closest_ground_tile == None:
-                # Set the player's position as the new position (Normal falling)
-                self.rect.y = round(new_position)
-
-            # If the bottom of the player is greater than the top of the closest ground tile
-            elif (new_position + self.rect.height) > self.closest_ground_tile.rect.top:
-
-                # At low frame rates, as a last case scenario, do another check to see if the bottom of the player would still be greater than top of the closest ground tile
-                if int(new_position + self.rect.height) > self.closest_ground_tile.rect.top:
-                    # If it is, set the player's bottom to be at the top of the closest ground tile
-                    self.rect.bottom = self.closest_ground_tile.rect.top
-                
-                # Otherwise
-                else:
-                    # Truncate the new position, so the player won't be overlapping the closest ground tile
-                    self.rect.y = int(new_position)
-
-            # If the bottom of the player is less than or equal to the top of the tile
-            elif (new_position + self.rect.height) <= self.closest_ground_tile.rect.top:
-                # Set the position of the player as the rounded value (rounds up), so the player won't be overlapping the closest ground tile
-                self.rect.y = round(new_position)
-        
         # Set the new value for v based on the delta time  
         self.jumping_suvat_u += (self.jumping_suvat_a * self.delta_time)
 
@@ -528,13 +495,14 @@ class Player(Generic, pygame.sprite.Sprite):
         # The method used to check if the player can power jump, and if they are entering the correct input, perform the power jump
 
         # If the player is on the ground
-        if self.allowed_to_jump == True and self.allowed_to_double_jump == False:
+        if self.closest_ground_tile != None and pygame.Rect(self.rect.x, self.rect.y + 1, self.rect.width, self.rect.height).colliderect(self.closest_ground_tile.rect):
             
             # If the player is holding the spacebar button
             if pygame.key.get_pressed()[pygame.K_SPACE]:
-                
+
                 # Set the attribute that the player is performing a power jump to True
-                self.performing_power_jump = True
+                if self.performing_power_jump != True:
+                    self.performing_power_jump = True
 
                 # Draw and update the jump power indicator
                 self.draw_jump_power_indicator()
@@ -576,9 +544,6 @@ class Player(Generic, pygame.sprite.Sprite):
 
                 # Reset the player's horizontal velocity 
                 self.horizontal_suvat_u = 0
-
-                # Make the player jump
-                self.jump()
 
                 # Reset the attribute that the player is performing a power jump back to False
                 self.performing_power_jump = False
@@ -703,37 +668,15 @@ class Player(Generic, pygame.sprite.Sprite):
 
         # The method used to move the player when falling
 
-        # Equation used: s = vt + 1/2(a)(t^2)
+        # Equation used: s = vt + 1/2(a)(t^2) 
+        # Note: Limit the amount the player can move down by, this is because at low frame rates, the fall distance can be greater than the tile size
+        #self.falling_suvat_s = max((self.falling_suvat_u * self.delta_time) + (0.5 * self.falling_suvat_a * (self.delta_time ** 2)), -8) # -10 = Tested value which is good enough for both 60 FPS and below
         self.falling_suvat_s = (self.falling_suvat_u * self.delta_time) + (0.5 * self.falling_suvat_a * (self.delta_time ** 2))
 
         # Move the player up / down based on the displacement
         new_position = self.rect.y 
-
-        # Set the new position, based on if there are any collisions or not
-        new_position -= self.handle_tile_collisions(movement_direction = ("y", "down"), movement_speed = self.falling_suvat_s)
-        
-        # If there is not closest ground tile
-        if self.closest_ground_tile == None:
-            # Set the player's position as the new position (Normal falling)
-            self.rect.y = round(new_position)
-
-        # If the bottom of the player is greater than the top of the closest ground tile
-        elif (new_position + self.rect.height) > self.closest_ground_tile.rect.top:
-
-            # At low frame rates, as a last case scenario, do another check to see if the bottom of the player would still be greater than top of the closest ground tile
-            if int(new_position + self.rect.height) > self.closest_ground_tile.rect.top:
-                # If it is, set the player's bottom to be at the top of the closest ground tile
-                self.rect.bottom = self.closest_ground_tile.rect.top
-            
-            # Otherwise
-            else:
-                # Truncate the new position, so the player won't be overlapping the closest ground tile
-                self.rect.y = int(new_position)
-
-        # If the bottom of the player is less than or equal to the top of the tile
-        elif (new_position + self.rect.height) <= self.closest_ground_tile.rect.top:
-            # Set the position of the player as the rounded value (rounds up), so the player won't be overlapping the closest ground tile
-            self.rect.y = round(new_position)
+        new_position -= self.dy
+        self.rect.y = round(new_position)
 
         # Set the new value for v based on the delta time  
         self.falling_suvat_u += (self.falling_suvat_a * self.delta_time)
@@ -755,8 +698,8 @@ class Player(Generic, pygame.sprite.Sprite):
 
     def handle_horizontal_movement(self):
 
-        # Hold the current x position of the player in temporary variables 
-        position_x, position_x_2 = self.rect.x, self.rect.x
+        # (For floating point accuracy)
+        next_position = self.rect.x
 
         # If the "a" key is pressed
         if pygame.key.get_pressed()[pygame.K_a] and pygame.key.get_pressed()[pygame.K_d] == False:
@@ -789,8 +732,8 @@ class Player(Generic, pygame.sprite.Sprite):
                 # Otherwise
                 elif self.rect.left - self.horizontal_suvat_s > 0:
                     # Move the player left
-                    position_x += self.handle_tile_collisions(movement_direction = ("x", "left"), movement_speed = - self.horizontal_suvat_s)
-                    self.rect.x = round(position_x)
+                    next_position -= self.dx
+                    self.rect.x = round(next_position)
 
         # If the "d" key is pressed
         elif pygame.key.get_pressed()[pygame.K_d] and pygame.key.get_pressed()[pygame.K_a] == False:
@@ -800,7 +743,7 @@ class Player(Generic, pygame.sprite.Sprite):
                 # Stop decelerating
                 self.decelerating = False
 
-            # Set the player to face right (allows players to change where the jump power indicator is drawn on the screena nd the direction the player is facing)
+            # Set the player to face right (allows players to change where the jump power indicator is drawn on the screen and the direction the player is facing)
             self.facing_right = True
 
             # If the player is not performing a power jump currently
@@ -821,16 +764,20 @@ class Player(Generic, pygame.sprite.Sprite):
                     self.rect.right = self.last_tile_position[0]
 
                 # Otherwise
-                else:
+                elif self.rect.right + self.horizontal_suvat_s < self.last_tile_position[0]:
                     # Move the player right
-                    position_x_2 += self.handle_tile_collisions(movement_direction = ("x", "right"), movement_speed = self.horizontal_suvat_s)
-                    self.rect.x = round(position_x_2)
+                    next_position += self.dx
+                    self.rect.x = round(next_position)
 
         # ---------------------------------------------------------------------------------
         # Deceleration
 
         # If the player has let go of both horizontal movement input keys or if the deceleration has already started, but the player tried to stop it by going against the direction of deceleration
         if ((pygame.key.get_pressed()[pygame.K_a] == False and pygame.key.get_pressed()[pygame.K_d] == False) and self.horizontal_suvat_u > 0) or self.decelerating == True:
+
+            # (For floating point accuracy)
+            # Note: This is declared here because self.rect.x may have changed 
+            next_position_2 = self.rect.x
 
             # If the player is not charging a power jump
             if self.jump_power == 0:
@@ -859,6 +806,10 @@ class Player(Generic, pygame.sprite.Sprite):
                 # Set the distance travelled based on the current velocity
                 self.horizontal_suvat_s = ((self.horizontal_suvat_u * self.delta_time) + (0.5 * self.horizontal_suvat_a * (self.delta_time ** 2)))
 
+                # Handle tile collisions again
+                # Note: When decelerating, dx will have to keep changing
+                self.handle_tile_collisions()
+
                 # If the player was facing right 
                 if self.facing_right == True:
 
@@ -868,10 +819,10 @@ class Player(Generic, pygame.sprite.Sprite):
                         self.rect.right = self.last_tile_position[0]
 
                     # Otherwise
-                    else:
+                    elif self.rect.right + self.horizontal_suvat_s < self.last_tile_position[0]:
                         # Move the player right
-                        position_x_2 += self.handle_tile_collisions(movement_direction = ("x", "right"), movement_speed = self.horizontal_suvat_s)
-                        self.rect.x = round(position_x_2)
+                        next_position_2 += self.dx
+                        self.rect.x = round(next_position_2)
 
                 # If the player was facing left
                 elif self.facing_right == False:
@@ -884,8 +835,8 @@ class Player(Generic, pygame.sprite.Sprite):
                     # Otherwise
                     elif self.rect.left - self.horizontal_suvat_s > 0:
                         # Move the player left
-                        position_x += self.handle_tile_collisions(movement_direction = ("x", "left"), movement_speed = - self.horizontal_suvat_s)
-                        self.rect.x = round(position_x)
+                        next_position_2 -= self.dx
+                        self.rect.x = round(next_position_2)
 
     def handle_player_movement(self):
         
@@ -973,56 +924,100 @@ class Player(Generic, pygame.sprite.Sprite):
     # ---------------------------------------------------------------------------------
     # Collisions      
                           
-    def handle_tile_collisions(self, movement_direction, movement_speed):
-        # Calculates the distance that the player should move right before they collide with a tile, so that the player never phases through the tile
+    def handle_tile_collisions(self):
 
-        # self.rect.y - movement_speed because going up = subtracting, going down = adding
-        y_collisions = pygame.Rect(self.rect.x, self.rect.y - movement_speed, self.rect.width, self.rect.height).collidedict(self.neighbouring_tiles_dict)
-        x_collisions = pygame.Rect(self.rect.x + movement_speed, self.rect.y, self.rect.width, self.rect.height).collidedict(self.neighbouring_tiles_dict)
+        # ---------------------------------------------------------------------------------
+        # Vertical collisions
 
+        # Vertical collisions when jumping
+        if self.falling == False:
 
-        # If there is a y collision
-        if y_collisions != None and movement_direction[0] == "y":
-            pygame.draw.rect(self.surface, "green", (y_collisions[0].rect.x - self.camera_position[0], y_collisions[0].rect.y - self.camera_position[1], y_collisions[0].rect.width, y_collisions[0].rect.height))
+            # If the player is at the stage of the jump where they are traveling upwards
+            if self.jumping_suvat_u >= 0:
+                # If the top of the player will be past / colliding with the bottom of the closest ceiling tile
+                if self.closest_ceiling_tile != None and (round(self.rect.top - self.jumping_suvat_s) <= self.closest_ceiling_tile.rect.bottom):
+
+                    # Set the top of the player to be the bottom of the closest ceiling tile
+                    self.rect.top = self.closest_ceiling_tile.rect.bottom
+                    # The player should now start traveling downwards
+                    self.jumping_suvat_u = 0
+                    self.dy = 0
+
+                # Set dy to the current distance the player can move when jumping
+                else:
+                    self.dy = self.jumping_suvat_s
             
-            # If the player is moving down
-            if movement_speed < 0:
-                # Return the negative value of how much the player should move. 
-                # Note: This is because self.rect.y - (- dy) is the same as self.rect.y + dy
-                return - (movement_speed - ((self.rect.bottom + movement_speed) - y_collisions[0].rect.top))
+            # If the player is at the stage of the jump where they are traveling downwards
+            elif self.jumping_suvat_u <= 0: 
             
-            # If the player is moving up
-            elif movement_speed > 0:
-                # Move the player as much as we can before overlapping with the tile
-                return movement_speed - (y_collisions[0].rect.bottom - (self.rect.y - movement_speed))
+                # If the bottom of the player will be past / colliding with the top of the closest ground tile
+                if self.closest_ground_tile != None and round(self.rect.bottom - self.jumping_suvat_s) >= self.closest_ground_tile.rect.top:
+                    # Set the bottom of the player to be the top of the closest ground tile
+                    self.rect.bottom = self.closest_ground_tile.rect.top
+                    self.dy = 0
+
+                # If the bottom of the player will not collide with the top of the closest ground tile
+                else:
+                    # Set dy to the current distance the player can move when jumping
+                    self.dy = self.jumping_suvat_s
+
+        # Vertical collisions when falling
+        elif self.falling == True:
+            
+            # If the bottom of the player will be past / colliding with the top of the closest ground tile
+            if self.closest_ground_tile != None and round(self.rect.bottom - self.falling_suvat_s) >= self.closest_ground_tile.rect.top:
+                # Set the bottom of the player to be the top of the closest ground tile
+                self.rect.bottom = self.closest_ground_tile.rect.top
+                self.dy = 0
+
+            # If the bottom of the player will not collide with the top of the closest ground tile
+            else: 
+                # Set dy to the current distance the player can move when falling
+                self.dy = self.falling_suvat_s
+
+        # ---------------------------------------------------------------------------------
+        # Horizontal collisions
+
+        # If the player is facing right (i.e. moving right)
+        if self.facing_right == True:
+            x_collisions = pygame.Rect(round(self.rect.x + self.horizontal_suvat_s), self.rect.y, self.rect.width, self.rect.height).collidedict(self.neighbouring_tiles_dict)
+        # If the player is facing left (i.e. moving left)
+        elif self.facing_right == False:
+            x_collisions = pygame.Rect(round(self.rect.x - self.horizontal_suvat_s), self.rect.y, self.rect.width, self.rect.height).collidedict(self.neighbouring_tiles_dict)
 
         # If there is a horizontal collision
-        elif x_collisions != None and movement_direction[0] == "x":
-            pygame.draw.rect(self.surface, "green", (x_collisions[0].rect.x - self.camera_position[0], x_collisions[0].rect.y - self.camera_position[1], x_collisions[0].rect.width, x_collisions[0].rect.height))
+        if x_collisions != None:
+            #pygame.draw.rect(self.surface, "green", (x_collisions[0].rect.x - self.camera_position[0], x_collisions[0].rect.y - self.camera_position[1], x_collisions[0].rect.width, x_collisions[0].rect.height))
+
+            # If the player is facing right (i.e. moving right)
+            if self.facing_right == True:
+                # The player's right should be the tile's left
+                self.rect.right = x_collisions[0].rect.left
+            # If the player is facing left (i.e. moving left)
+            elif self.facing_right == False:
+                # The player's left should be the tile's right
+                self.rect.left = x_collisions[0].rect.right
             
-            # If the player is moving left
-            if movement_speed < 0:
-                # Move the player as much as we can before overlapping with the tile
-                return movement_speed + (x_collisions[0].rect.right - (self.rect.left + movement_speed))
+            # Set dx to be 0, so that the player does not move
+            self.dx = 0
 
-            # If the player is moving right
-            if movement_speed > 0:
-                # Move the player as much as we can before overlapping with the tile
-                return movement_speed - ((self.rect.right + movement_speed) - x_collisions[0].rect.left)
-
-        # If there are no collisions, then move the player by movement_speed
-        return movement_speed
+        # If there is no horizontal collision
+        elif x_collisions == None:
+            # Move the player by the horizontal distance
+            self.dx = self.horizontal_suvat_s
 
     def run(self):
-        
         pygame.draw.line(self.surface, "white", (self.surface.get_width() / 2, 0), (self.surface.get_width() / 2, self.surface.get_height()))
 
         # Play animations
         self.play_animations()
 
         # TEMPORARY
-        for tile in self.neighbouring_tiles_dict.keys():
-            pygame.draw.rect(self.surface, "green", (tile.rect.x - self.camera_position[0], tile.rect.y - self.camera_position[1], tile.rect.width, tile.rect.height))
+        # for tile in self.neighbouring_tiles_dict.keys():
+        #     pygame.draw.rect(self.surface, "green", (tile.rect.x - self.camera_position[0], tile.rect.y - self.camera_position[1], tile.rect.width, tile.rect.height))
+
+        # Handle tile collisions (affects player movement)
+        self.handle_tile_collisions()
 
         # Track player movement
         self.handle_player_movement()

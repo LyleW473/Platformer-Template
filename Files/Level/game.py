@@ -10,7 +10,7 @@ class Game:
         self.screen = pygame.display.get_surface()  
 
         # Create a surface for which all objects will be drawn onto. This surface is then scaled and drawn onto the main screen
-        self.scaled_surface = pygame.Surface((screen_width / 8, screen_height / 8))
+        self.scaled_surface = pygame.Surface((screen_width / 4, screen_height / 4))
 
         # Attribute which is monitored by the game states controller
         self.running = False
@@ -219,7 +219,7 @@ class Game:
         for world_tile, world_tile_number in self.world_tiles_dict.items():
 
             # If the world tile is within 1 tiles of the player (horizontally and vertically)
-            if (self.player.rect.left  - (self.tile_size) <= world_tile.rect.centerx <= self.player.rect.right + (self.tile_size)) and (self.player.rect.top - (self.tile_size * 1) <= world_tile.rect.centery <= (self.player.rect.bottom + self.tile_size * 1)):
+            if (self.player.rect.left  - (self.tile_size) <= world_tile.rect.centerx <= self.player.rect.right + (self.tile_size)) and (self.player.rect.top - (self.tile_size * 2) <= world_tile.rect.centery <= (self.player.rect.bottom + self.tile_size * 1)):
 
                 # Add it to the player's neighbouring tiles dictionary
                 self.player.neighbouring_tiles_dict[world_tile] = world_tile_number
@@ -239,8 +239,12 @@ class Game:
         finding_closest_ground_tile_rect = pygame.Rect(self.player.rect.x, self.player.rect.bottom, self.player.image.get_width(), self.scaled_surface.get_height() - self.player.rect.bottom)
         #pygame.draw.rect(self.scaled_surface, "red", (finding_closest_ground_tile_rect.x - self.camera_position[0], finding_closest_ground_tile_rect.y - self.camera_position[1], finding_closest_ground_tile_rect.width, finding_closest_ground_tile_rect.height))
 
+        finding_closest_ceiling_tile_rect = pygame.Rect(self.player.rect.x, 0, self.player.image.get_width(), self.player.rect.top)
+        pygame.draw.rect(self.scaled_surface, "red", (finding_closest_ceiling_tile_rect.x - self.camera_position[0], finding_closest_ceiling_tile_rect.y - self.camera_position[1], finding_closest_ceiling_tile_rect.width, finding_closest_ceiling_tile_rect.height))
+
         # Check for tiles inside the world tiles dictionary for collisions 
         closest_ground_tile = finding_closest_ground_tile_rect.collidedict(self.world_tiles_dict)
+        closest_ceiling_tile = finding_closest_ceiling_tile_rect.collidedict(self.world_tiles_dict)
 
         # If there is no closest ground tile, i.e. the player is floating in mid-air
         if closest_ground_tile == None:
@@ -252,6 +256,17 @@ class Game:
             # Set that players closest ground tile as the closest ground tile found (closest_ground_tile[0] = The world tile, closest_ground_tile[1] = The world tile number)
             self.player.closest_ground_tile = closest_ground_tile[0]
             pygame.draw.rect(self.scaled_surface, "white", pygame.Rect(closest_ground_tile[0].rect.x - self.camera_position[0], closest_ground_tile[0].rect.y- self.camera_position[1], closest_ground_tile[0].rect.width, closest_ground_tile[0].rect.height))
+
+        # If there is no closest ceiling tile
+        if closest_ceiling_tile == None:
+            # Set the player's closest ceiling tile as None
+            self.player.closest_ceiling_tile = None
+        
+        # If there is a closest ceiling tile
+        if closest_ceiling_tile != None:
+            # Set that players closest ceiling tile as the closest ceiling tile found (closest_ceiling_tile[0] = The world tile, closest_ceiling_tile[1] = The world tile number)
+            self.player.closest_ceiling_tile = closest_ceiling_tile[0]
+            pygame.draw.rect(self.scaled_surface, "white", pygame.Rect(closest_ceiling_tile[0].rect.x - self.camera_position[0], closest_ceiling_tile[0].rect.y- self.camera_position[1], closest_ceiling_tile[0].rect.width, closest_ceiling_tile[0].rect.height))
     
     def handle_collisions(self):
         
